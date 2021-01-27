@@ -1,2 +1,2 @@
 User-agent: *
-Sitemap: https://BackendHouse.github.io/sitemap.xml
+Sitemap: https://backendhouse.github.io/sitemap.xml

@@ -3,7 +3,7 @@
 alloc.h
 </code></pre><h2 id=2-allocator>2 allocator</h2><p>STL中默认使用的内存分配器，被广泛用于<code>vector</code>, <code>hashmap</code>, <code>deque</code>等数据结构中
 该类实现以下接口：</p><ul><li>allocate：给n个对象分配连续内存</li></ul><div class=highlight><pre style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-c++ data-lang=c++>_Tp<span style=color:#ff79c6>*</span> <span style=color:#50fa7b>allocate</span>(size_type __n, <span style=color:#ff79c6>const</span> <span style=color:#8be9fd>void</span><span style=color:#ff79c6>*</span> <span style=color:#ff79c6>=</span> <span style=color:#bd93f9>0</span>) {
-    <span style=color:#ff79c6>return</span> __n <span style=color:#ff79c6>!</span><span style=color:#ff79c6>=</span> <span style=color:#bd93f9>0</span> <span style=color:#ff79c6>?</span> <span style=color:#ff79c6>static_cast</span><span style=color:#ff79c6>&lt;</span>_Tp<span style=color:#ff79c6>*</span><span style=color:#ff79c6>&gt;</span>(_Alloc<span style=color:#ff79c6>:</span><span style=color:#ff79c6>:</span>allocate(__n <span style=color:#ff79c6>*</span> <span style=color:#ff79c6>sizeof</span>(_Tp))) 
+    <span style=color:#ff79c6>return</span> __n <span style=color:#ff79c6>!</span><span style=color:#ff79c6>=</span> <span style=color:#bd93f9>0</span> <span style=color:#ff79c6>?</span> <span style=color:#ff79c6>static_cast</span><span style=color:#ff79c6>&lt;</span>_Tp<span style=color:#ff79c6>*</span><span style=color:#ff79c6>&gt;</span>(_Alloc<span style=color:#ff79c6>:</span><span style=color:#ff79c6>:</span>allocate(__n <span style=color:#ff79c6>*</span> <span style=color:#ff79c6>sizeof</span>(_Tp)))
                     <span style=color:#ff79c6>:</span> <span style=color:#bd93f9>0</span>;
 }
 </code></pre></div><ul><li>deallocate: 释放n个对象的连续内存</li></ul><div class=highlight><pre style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-c++ data-lang=c++><span style=color:#6272a4>// __p is not permitted to be a null pointer.
@@ -20,10 +20,10 @@ alloc.h
 </code></pre><p>而<code>__default_alloc_template</code>由一级内存池和二级内存池组成</p><p><img src=/images/STL%E5%86%85%E5%AD%98%E6%B1%A0%E7%BB%93%E6%9E%84.png alt=STL内存池结构></p><h3 id=31-二级内存池>3.1 二级内存池</h3><p>二级内存池为一个静态数组，数组元素类型为<code>_Obj*</code>，每个数组元素即一个单向链表的头。
 <code>_S_free_list</code>存储不同大小空闲内存块的链表头，如<code>size</code>为8的<code>chunk_list</code>的链表头为<code>_S_free_list</code>的第一个元素，size为16的<code>chunk_list</code>对应第二个元素，以此类推</p><div class=highlight><pre style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-c++ data-lang=c++><span style=color:#ff79c6>private</span><span style=color:#ff79c6>:</span>
 <span style=color:#ff79c6>#</span><span style=color:#ff79c6> if defined(__SUNPRO_CC) || defined(__GNUC__) || defined(__HP_aCC)</span><span style=color:#ff79c6>
-</span><span style=color:#ff79c6></span>    <span style=color:#ff79c6>static</span> _Obj<span style=color:#ff79c6>*</span> __STL_VOLATILE _S_free_list[]; 
+</span><span style=color:#ff79c6></span>    <span style=color:#ff79c6>static</span> _Obj<span style=color:#ff79c6>*</span> __STL_VOLATILE _S_free_list[];
         <span style=color:#6272a4>// Specifying a size results in duplicate def for 4.1
 </span><span style=color:#6272a4></span><span style=color:#ff79c6>#</span><span style=color:#ff79c6> else</span><span style=color:#ff79c6>
-</span><span style=color:#ff79c6></span>    <span style=color:#ff79c6>static</span> _Obj<span style=color:#ff79c6>*</span> __STL_VOLATILE _S_free_list[_NFREELISTS]; 
+</span><span style=color:#ff79c6></span>    <span style=color:#ff79c6>static</span> _Obj<span style=color:#ff79c6>*</span> __STL_VOLATILE _S_free_list[_NFREELISTS];
 </code></pre></div><p><code>_Obj</code>类型：</p><div class=highlight><pre style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-c++ data-lang=c++>  <span style=color:#ff79c6>union</span> <span style=color:#50fa7b>_Obj</span> {
         <span style=color:#ff79c6>union</span> <span style=color:#50fa7b>_Obj</span><span style=color:#ff79c6>*</span> _M_free_list_link;
         <span style=color:#8be9fd>char</span> _M_client_data[<span style=color:#bd93f9>1</span>];    <span style=color:#6272a4>/* The client sees this.        */</span>
@@ -64,7 +64,8 @@ alloc.h
     <span style=color:#ff79c6>static</span> <span style=color:#8be9fd>void</span> <span style=color:#50fa7b>deallocate</span>(_Tp<span style=color:#ff79c6>*</span> __p)
       { _Alloc<span style=color:#ff79c6>:</span><span style=color:#ff79c6>:</span>deallocate(__p, <span style=color:#ff79c6>sizeof</span> (_Tp)); }
 };
-</code></pre></div><h3 id=42-debug_alloc>4.2 debug_alloc</h3><p>debug_alloc: 元素类型默认为char, 内存分配器通过模板参数指定<br>debug_alloc实现中有一个比较有意思的地方：</p><ul><li>在申请内存时，多分配8个字节，用于记录分配的内存缓冲区的长度，给用户返回的缓冲区不包括这64位。</li><li>在释放内存时，首先检查用户输入的内存缓冲区长度是否正确，然后将用户内存缓冲区和保存长度的8个字节一并释放。内存布局如下所示</li></ul><pre><code>buf_len(8 Byte) | buf(n Byte)
+</code></pre></div><h3 id=42-debug_alloc>4.2 debug_alloc</h3><p>debug_alloc: 元素类型默认为char, 内存分配器通过模板参数指定
+debug_alloc实现中有一个比较有意思的地方：</p><ul><li>在申请内存时，多分配8个字节，用于记录分配的内存缓冲区的长度，给用户返回的缓冲区不包括这64位。</li><li>在释放内存时，首先检查用户输入的内存缓冲区长度是否正确，然后将用户内存缓冲区和保存长度的8个字节一并释放。内存布局如下所示</li></ul><pre><code>buf_len(8 Byte) | buf(n Byte)
 </code></pre><div class=highlight><pre style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-c++ data-lang=c++><span style=color:#6272a4>// Allocator adaptor to check size arguments for debugging.
 </span><span style=color:#6272a4></span><span style=color:#6272a4>// Reports errors using assert.  Checking can be disabled with
 </span><span style=color:#6272a4></span><span style=color:#6272a4>// NDEBUG, but it&#39;s far better to just use the underlying allocator

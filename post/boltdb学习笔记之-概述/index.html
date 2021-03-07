@@ -1,0 +1,102 @@
+<!doctype html><html lang=zh-cn><head><meta charset=utf-8><meta http-equiv=x-ua-compatible content="IE=edge,chrome=1"><title>Boltdb学习笔记之〇--概述 - 后端技术小屋</title><meta name=renderer content="webkit"><meta name=viewport content="width=device-width,initial-scale=1,maximum-scale=1"><meta http-equiv=cache-control content="no-transform"><meta http-equiv=cache-control content="no-siteapp"><meta name=theme-color content="#f8f5ec"><meta name=msapplication-navbutton-color content="#f8f5ec"><meta name=apple-mobile-web-app-capable content="yes"><meta name=apple-mobile-web-app-status-bar-style content="#f8f5ec"><meta name=author content="后端侠"><meta name=description content="Boltdb学习笔记之〇--概述"><meta name=keywords content="Hugo,theme,后端侠"><meta name=generator content="Hugo 0.62.2 with theme even"><link rel=canonical href=https://backendhouse.github.io/post/boltdb%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0%E4%B9%8B-%E6%A6%82%E8%BF%B0/><link rel=apple-touch-icon sizes=180x180 href=/apple-touch-icon.png><link rel=icon type=image/png sizes=32x32 href=/favicon-32x32.png><link rel=icon type=image/png sizes=16x16 href=/favicon-16x16.png><link rel=manifest href=/manifest.json><link rel=mask-icon href=/safari-pinned-tab.svg color=#5bbad5><link href=/sass/main.min.a2095472a2a8d7ddda1334cf60051cbe40ed55f2467554bb6aa4c17c9bcd27a4.css rel=stylesheet><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.css integrity="sha256-7TyXnr2YU040zfSP+rEcz29ggW4j56/ujTPwjMzyqFY=" crossorigin=anonymous><meta property="og:title" content="Boltdb学习笔记之〇--概述"><meta property="og:description" content="Boltdb学习笔记之〇--概述"><meta property="og:type" content="article"><meta property="og:url" content="https://backendhouse.github.io/post/boltdb%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0%E4%B9%8B-%E6%A6%82%E8%BF%B0/"><meta property="article:published_time" content="2021-03-07T20:28:52+08:00"><meta property="article:modified_time" content="2021-03-07T20:28:52+08:00"><meta itemprop=name content="Boltdb学习笔记之〇--概述"><meta itemprop=description content="Boltdb学习笔记之〇--概述"><meta itemprop=datePublished content="2021-03-07T20:28:52+08:00"><meta itemprop=dateModified content="2021-03-07T20:28:52+08:00"><meta itemprop=wordCount content="2241"><meta itemprop=keywords content="数据库,boltdb,"><meta name=twitter:card content="summary"><meta name=twitter:title content="Boltdb学习笔记之〇--概述"><meta name=twitter:description content="Boltdb学习笔记之〇--概述"><!--[if lte IE 9]><script src=https://cdnjs.cloudflare.com/ajax/libs/classlist/1.1.20170427/classList.min.js></script><![endif]--><!--[if lt IE 9]><script src=https://cdn.jsdelivr.net/npm/html5shiv@3.7.3/dist/html5shiv.min.js></script><script src=https://cdn.jsdelivr.net/npm/respond.js@1.4.2/dest/respond.min.js></script><![endif]--></head><body><div id=mobile-navbar class=mobile-navbar><div class=mobile-header-logo><a href=/ class=logo>后端技术小屋</a></div><div class=mobile-navbar-icon><span></span><span></span><span></span></div></div><nav id=mobile-menu class="mobile-menu slideout-menu"><ul class=mobile-menu-list><a href=/><li class=mobile-menu-item>Home</li></a><a href=/post/><li class=mobile-menu-item>Archives</li></a><a href=/tags/><li class=mobile-menu-item>Tags</li></a><a href=/categories/><li class=mobile-menu-item>Categories</li></a><a href=/about/><li class=mobile-menu-item>About</li></a></ul></nav><div class=container id=mobile-panel><header id=header class=header><div class=logo-wrapper><a href=/ class=logo>后端技术小屋</a></div><nav class=site-navbar><ul id=menu class=menu><li class=menu-item><a class=menu-item-link href=/>Home</a></li><li class=menu-item><a class=menu-item-link href=/post/>Archives</a></li><li class=menu-item><a class=menu-item-link href=/tags/>Tags</a></li><li class=menu-item><a class=menu-item-link href=/categories/>Categories</a></li><li class=menu-item><a class=menu-item-link href=/about/>About</a></li></ul></nav></header><main id=main class=main><div class=content-wrapper><div id=content class=content><article class=post><header class=post-header><h1 class=post-title>Boltdb学习笔记之〇--概述</h1><div class=post-meta><span class=post-time>2021-03-07</span><div class=post-category><a href=/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/>数据库</a></div></div></header><div class=post-toc id=post-toc><h2 class=post-toc-title>文章目录</h2><div class="post-toc-content always-active"><nav id=TableOfContents><ul><li><ul><li><a href=#什么是boltdb>什么是boltdb</a></li><li><a href=#如何使用boltdb>如何使用boltdb</a><ul><li><a href=#数据模型>数据模型</a></li><li><a href=#安装>安装</a></li><li><a href=#操作db>操作DB</a></li><li><a href=#操作事务>操作事务</a></li><li><a href=#操作bucket>操作Bucket</a></li><li><a href=#操作keyvalue>操作key/value</a></li></ul></li><li><a href=#如何分析boltdb>如何分析Boltdb</a><ul><li><a href=#代码导读>代码导读</a></li><li><a href=#分析工具>分析工具</a></li></ul></li></ul></li></ul></nav></div></div><div class=post-content><blockquote><p>更多精彩内容，请关注微信公众号：<strong>后端技术小屋</strong></p></blockquote><p>看了boltdb也有一阵子了，看完之后总想写点什么，因为感觉到这可能是个不小的坑，所以迟迟没有动笔(没错我的拖延症又犯了..)。最近有一种流行的说法：如果一个东西不能把它讲清楚，便不能说你学会了它。因为看起来会和真的会之间有一个巨大的鸿沟，想跨越这个鸿沟便需要不断的提问、思考与输出，这是个相对枯燥但绝对值得的过程，因此趁着周末两天的完整时间正式开始挖坑。</p><h2 id=什么是boltdb>什么是boltdb</h2><p>Boltdb是一个go语言开发的嵌入式kv数据库。其实现相对简单：</p><ul><li>不支持网络请求和SQL查询，因此也就没有了网络交互、词法分析、语法分析、查询优化等成熟数据库中必不可少的功能。</li><li>使用了比较少见的shadow page技术，只支持一个writer和多个reader，在这种约束下，事务的隔离级别为可串行话，并发控制也比较简单</li><li>使用mmap将内存与磁盘建立映射，由OS管理磁盘page load到内存的过程，大大减少了boltdb手动管理的复杂度。</li></ul><p>Boltdb所有代码加起来才1W行，但是麻雀虽小五脏俱全，非常适合用来学习数据库中的一些基本原理和概念，例如page、transanction、cursor等。</p><p>值得一提的是，Boltdb还是etcd底层的kv存储，目前Boltdb原仓库(<a href=https://github.com/boltdb/bolt>https://github.com/boltdb/bolt</a>)已经是read-only状态。而etcd维护了一个fork(<a href=https://github.com/etcd-io/bbolt),>https://github.com/etcd-io/bbolt),</a> 主要是为了继续增强可靠性、稳定性和性能。</p><h2 id=如何使用boltdb>如何使用boltdb</h2><h3 id=数据模型>数据模型</h3><p>在使用boltdb之前，我们需要对其数据模型有个直观的了解。以下是boltdb与关系型数据库的数据模型简单类比：</p><table><thead><tr><th>boltdb中的概念</th><th>关系型数据库中的概念</th></tr></thead><tbody><tr><td>DB</td><td>database</td></tr><tr><td>Bucket</td><td>table</td></tr><tr><td>key value pair</td><td>Tuple</td></tr></tbody></table><p>Boltdb中的Bucket虽然可简单类比成关系型数据中table，有一点却不相同：前者可嵌套创建Bucket, 即一个Bucket下还可创建子Bucket, 而后者不行。</p><h3 id=安装>安装</h3><div class=highlight><pre style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash>go get github.com/boltdb/bolt/...  
+</code></pre></div><h3 id=操作db>操作DB</h3><p>操作DB包括创建(打开)、关闭。</p><p>代码如下：在执行<code>bolt.Open</code>时，如果指定文件路径不存在，则根据路径创建一个数据库文件；否则加载该路径下的文件。使用<code>db.Close</code>便可关闭DB.</p><div class=highlight><pre style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-go data-lang=go><span style=color:#ff79c6>package</span> main  
+  
+<span style=color:#ff79c6>import</span> (  
+	<span style=color:#f1fa8c>&#34;log&#34;</span>  
+  
+	<span style=color:#f1fa8c>&#34;github.com/boltdb/bolt&#34;</span>  
+)  
+  
+<span style=color:#8be9fd;font-style:italic>func</span> <span style=color:#50fa7b>main</span>() {  
+	<span style=color:#6272a4>// Open the my.db data file in your current directory.  
+</span><span style=color:#6272a4></span>	<span style=color:#6272a4>// It will be created if it doesn&#39;t exist.  
+</span><span style=color:#6272a4></span>	db, err <span style=color:#ff79c6>:=</span> bolt.<span style=color:#50fa7b>Open</span>(<span style=color:#f1fa8c>&#34;my.db&#34;</span>, <span style=color:#bd93f9>0600</span>, <span style=color:#ff79c6>nil</span>)  
+	<span style=color:#ff79c6>if</span> err <span style=color:#ff79c6>!=</span> <span style=color:#ff79c6>nil</span> {  
+		log.<span style=color:#50fa7b>Fatal</span>(err)  
+	}  
+	<span style=color:#ff79c6>defer</span> db.<span style=color:#50fa7b>Close</span>()  
+  
+	<span style=color:#ff79c6>...</span>  
+}  
+</code></pre></div><h3 id=操作事务>操作事务</h3><p>Boltdb中按照是否只读将事务分为读事务和写事务。</p><p>用户使用<code>db.View</code>创建读事务时需传入一个回调函数，表示读事务执行操作。如果回调函数返回的<code>err != nil</code>，<code>db.View</code>则会回滚该事务，并将<code>err</code>透传给<code>db.View</code></p><div class=highlight><pre style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-go data-lang=go>err <span style=color:#ff79c6>:=</span> db.<span style=color:#50fa7b>View</span>(<span style=color:#8be9fd;font-style:italic>func</span>(tx <span style=color:#ff79c6>*</span>bolt.Tx) <span style=color:#8be9fd>error</span> {  
+	<span style=color:#ff79c6>...</span>  
+	<span style=color:#ff79c6>return</span> <span style=color:#ff79c6>nil</span>  
+})  
+</code></pre></div><p>使用<code>db.Update</code>可创建写事务。<code>db.Update</code>如何处理错误同<code>db.View</code></p><pre><code>err := db.Batch(func(tx *bolt.Tx) error {  
+	...  
+	return nil  
+})  
+</code></pre><h3 id=操作bucket>操作Bucket</h3><p>操作Bucket包括创建Bucket、删除Bucket</p><p>创建Bucket属于写事务。这里<code>db.Update</code>会创建一个写事务，写事务执行的操作是<code>CreateBucket</code>，即创建一个新的Bucket</p><div class=highlight><pre style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-go data-lang=go>db.<span style=color:#50fa7b>Update</span>(<span style=color:#8be9fd;font-style:italic>func</span>(tx <span style=color:#ff79c6>*</span>bolt.Tx) <span style=color:#8be9fd>error</span> {  
+	b, err <span style=color:#ff79c6>:=</span> tx.<span style=color:#50fa7b>CreateBucket</span>([]<span style=color:#8be9fd;font-style:italic>byte</span>(<span style=color:#f1fa8c>&#34;MyBucket&#34;</span>))  
+	<span style=color:#ff79c6>if</span> err <span style=color:#ff79c6>!=</span> <span style=color:#ff79c6>nil</span> {  
+		<span style=color:#ff79c6>return</span> fmt.<span style=color:#50fa7b>Errorf</span>(<span style=color:#f1fa8c>&#34;create bucket: %s&#34;</span>, err)  
+	}  
+	<span style=color:#ff79c6>return</span> <span style=color:#ff79c6>nil</span>  
+})  
+</code></pre></div><p>删除Bucket也属于写事务。使用上同理</p><div class=highlight><pre style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-go data-lang=go>db.<span style=color:#50fa7b>Update</span>(<span style=color:#8be9fd;font-style:italic>func</span>(tx <span style=color:#ff79c6>*</span>bolt.Tx) <span style=color:#8be9fd>error</span> {  
+	b, err <span style=color:#ff79c6>:=</span> tx.<span style=color:#50fa7b>DeleteBucket</span>([]<span style=color:#8be9fd;font-style:italic>byte</span>(<span style=color:#f1fa8c>&#34;MyBucket&#34;</span>))  
+	<span style=color:#ff79c6>if</span> err <span style=color:#ff79c6>!=</span> <span style=color:#ff79c6>nil</span> {  
+		<span style=color:#ff79c6>return</span> fmt.<span style=color:#50fa7b>Errorf</span>(<span style=color:#f1fa8c>&#34;create bucket: %s&#34;</span>, err)  
+	}  
+	<span style=color:#ff79c6>return</span> <span style=color:#ff79c6>nil</span>  
+})  
+</code></pre></div><h3 id=操作keyvalue>操作key/value</h3><p>操作key/value包括：新建/更新/删除/查询。所有的key/value对都必须属于某个具体的Bucket. 因此操作key/value之前必须找到Bucket对象。</p><p>新建/更新代码必须用写事务封装，代码如下，这里在名为<code>MyBucket</code>的Bucket下新增了一对<code>("answer", "42")</code></p><div class=highlight><pre style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-go data-lang=go>db.<span style=color:#50fa7b>Update</span>(<span style=color:#8be9fd;font-style:italic>func</span>(tx <span style=color:#ff79c6>*</span>bolt.Tx) <span style=color:#8be9fd>error</span> {  
+	b <span style=color:#ff79c6>:=</span> tx.<span style=color:#50fa7b>Bucket</span>([]<span style=color:#8be9fd;font-style:italic>byte</span>(<span style=color:#f1fa8c>&#34;MyBucket&#34;</span>))  
+	err <span style=color:#ff79c6>:=</span> b.<span style=color:#50fa7b>Put</span>([]<span style=color:#8be9fd;font-style:italic>byte</span>(<span style=color:#f1fa8c>&#34;answer&#34;</span>), []<span style=color:#8be9fd;font-style:italic>byte</span>(<span style=color:#f1fa8c>&#34;42&#34;</span>))  
+	<span style=color:#ff79c6>return</span> err  
+})  
+</code></pre></div><p>删除代码如下:</p><div class=highlight><pre style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-go data-lang=go>db.<span style=color:#50fa7b>Update</span>(<span style=color:#8be9fd;font-style:italic>func</span>(tx <span style=color:#ff79c6>*</span>bolt.Tx) <span style=color:#8be9fd>error</span> {  
+	b <span style=color:#ff79c6>:=</span> tx.<span style=color:#50fa7b>Bucket</span>([]<span style=color:#8be9fd;font-style:italic>byte</span>(<span style=color:#f1fa8c>&#34;MyBucket&#34;</span>))  
+	err <span style=color:#ff79c6>:=</span> b.<span style=color:#50fa7b>Delete</span>([]<span style=color:#8be9fd;font-style:italic>byte</span>(<span style=color:#f1fa8c>&#34;answer&#34;</span>)  
+	<span style=color:#ff79c6>return</span> err  
+})  
+</code></pre></div><p>查询代码如下：</p><div class=highlight><pre style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-go data-lang=go>db.<span style=color:#50fa7b>View</span>(<span style=color:#8be9fd;font-style:italic>func</span>(tx <span style=color:#ff79c6>*</span>bolt.Tx) <span style=color:#8be9fd>error</span> {  
+	b <span style=color:#ff79c6>:=</span> tx.<span style=color:#50fa7b>Bucket</span>([]<span style=color:#8be9fd;font-style:italic>byte</span>(<span style=color:#f1fa8c>&#34;MyBucket&#34;</span>))  
+	v <span style=color:#ff79c6>:=</span> b.<span style=color:#50fa7b>Get</span>([]<span style=color:#8be9fd;font-style:italic>byte</span>(<span style=color:#f1fa8c>&#34;answer&#34;</span>))  
+	fmt.<span style=color:#50fa7b>Printf</span>(<span style=color:#f1fa8c>&#34;The answer is: %s\n&#34;</span>, v)  
+	<span style=color:#ff79c6>return</span> <span style=color:#ff79c6>nil</span>  
+})  
+</code></pre></div><h2 id=如何分析boltdb>如何分析Boltdb</h2><h3 id=代码导读>代码导读</h3><p>首先是读代码，从微观到宏观的层面了解这座房屋如何建成的。代码阅读顺序是</p><pre><code>page.go: 磁盘上的page layout，包括meta page, freelist page, branch page, leaf page。  
+node.go: 磁盘上的page反序列化到内存之后的数据结构，也作为B+树节点。  
+freelist.go: page管理, 支持page申请、释放、回滚等操作。  
+cursor.go: 用于访问B+树的迭代器  
+bucket.go: Bucket数据结构，支持创建/删除子Bucket、新建/更新/删除kv数据。  
+db.go.go: 用于访问DB, 支持打开/关闭DB、创建读/写事务、db file自动扩容。  
+</code></pre><p>更详细的代码细节将在该系列的后续内容中给出.</p><h3 id=分析工具>分析工具</h3><p>Boltdb提供了一个好用的工具，可用于查看db file中每个page的内容</p><p>安装：</p><div class=highlight><pre style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-go data-lang=go>git clone https:<span style=color:#6272a4>//github.com/boltdb/bolt   
+</span><span style=color:#6272a4></span>cd cmd<span style=color:#ff79c6>/</span>bolt  
+<span style=color:#ff79c6>go</span> build  
+ls .<span style=color:#ff79c6>/</span>bolt  
+</code></pre></div><p>查看所有pages状态</p><pre><code>$ ./bolt  pages  /tmp/bolt.db   | head  
+ID       TYPE       ITEMS  OVRFLW  
+======== ========== ====== ======  
+0        meta       0              
+1        meta       0              
+2        freelist   4              
+3        leaf       141            
+4        leaf       86             
+5        leaf       85             
+6        branch     117            
+7        leaf       85      
+</code></pre><p>其中ID表示page id, TYPE为page类型，ITEMS表示其中的数据条数，OVRFLW表示该page是否溢出。</p><p>查看某个page的内容</p><pre><code>$ ./bolt  page /tmp/bolt-624750664  3  | head  
+Page ID:    3  
+Page Type:  leaf  
+Total Size: 4096 bytes  
+Item Count: 141  
+  
+&quot;9874&quot;: &quot;9874&quot;  
+&quot;9875&quot;: &quot;9875&quot;  
+&quot;9876&quot;: &quot;9876&quot;  
+&quot;9877&quot;: &quot;9877&quot;  
+&quot;9878&quot;: &quot;9878&quot;  
+</code></pre><p>以上为某个leaf page的内容，底部为该page中存储的key/value对。</p><blockquote><p><strong>推荐阅读</strong></p></blockquote><ul><li><a href=https://mp.weixin.qq.com/s/rI8eO1VVGmTQaMyMLOHK8g>一文读懂clickhouse集群监控</a></li><li><a href=https://mp.weixin.qq.com/s/DQyUboTacgB3c_9iFi-aUw>redis实现分布式锁</a></li><li><a href=https://mp.weixin.qq.com/s/sJoQAx6xk4lOlZMouayT-Q>C/C++关键字之restrict</a></li><li><a href=https://mp.weixin.qq.com/s/qM_gf_aW_aKFhIK6PZTYEA>现代C++之右值语义</a></li><li><a href=https://mp.weixin.qq.com/s/Vv8rIogerep5gX84psVZlA>30分钟入门Vim</a></li><li><a href=https://mp.weixin.qq.com/s/cXmElKvz2WR5agUN11WFUQ>30分钟入门GDB</a></li><li><a href=https://mp.weixin.qq.com/s/dT3lCxkLliGgSRzSvXYxag>STL源码分析&ndash;vector</a></li><li><a href=https://mp.weixin.qq.com/s/T7i0V2hcVU3HDO7DanPuGg>zookeeper client原理总结</a></li><li><a href=https://mp.weixin.qq.com/s/S6cSgzHTjUOR9AhixPjnWA>推荐几个好用的效率神器</a></li><li><a href=https://mp.weixin.qq.com/s/LBnsNeUBf34rZrewlblzcA>Python乱码九问</a></li><li><a href=https://mp.weixin.qq.com/s/Fux7QEtVeu-Zlde0aMnTNQ>Linux Shell脚本攻略读书笔记</a></li></ul><blockquote><p>更多精彩内容，请扫码关注微信公众号：<strong>后端技术小屋</strong>。如果觉得文章对你有帮助的话，请多多分享、转发、在看。<br><img src=https://backendhouse.github.io/images/qrcode.png alt=二维码></p></blockquote></div><div class=post-copyright><p class=copyright-item><span class=item-title>文章作者</span>
+<span class=item-content>后端侠</span></p><p class=copyright-item><span class=item-title>上次更新</span>
+<span class=item-content>2021-03-07</span></p></div><footer class=post-footer><div class=post-tags><a href=/tags/%E6%95%B0%E6%8D%AE%E5%BA%93/>数据库</a>
+<a href=/tags/boltdb/>boltdb</a></div><nav class=post-nav><a class=next href=/post/%E5%88%86%E4%BA%AB%E4%B8%80%E4%B8%AA%E6%9C%89%E6%84%8F%E6%80%9D%E7%9A%84gdb%E6%8F%92%E4%BB%B6/><span class="next-text nav-default">分享一个有意思的gdb插件</span>
+<span class="next-text nav-mobile">下一篇</span>
+<i class="iconfont icon-right"></i></a></nav></footer></article></div><div id=comments-gitment></div><link rel=stylesheet href=https://cdn.jsdelivr.net/gh/theme-next/theme-next-gitment@1/default.min.css crossorigin=anonymous><script src=https://cdn.jsdelivr.net/gh/theme-next/theme-next-gitment@1/gitment.browser.min.js crossorigin=anonymous></script><script type=text/javascript>var gitment=new Gitment({id:'2021-03-07 20:28:52 \x2b0800 \x2b0800',title:'Boltdb学习笔记之〇--概述',link:decodeURI(location.href),desc:'更多精彩内容，请关注微信公众号：后端技术小屋 看了boltdb也有一阵子了，看完之后总想写点什么，因为感觉到这可能是个不小的坑，所以迟迟没有动',owner:'后端侠',repo:'后端侠.github.io',oauth:{client_id:'ec65a8719513fe7b4d9a',client_secret:'5b43d6e7f7b971b4ee51e9417332acf93c4165ec'}});gitment.render('comments-gitment');</script><noscript>Please enable JavaScript to view the <a href=https://github.com/imsun/gitment>comments powered by gitment.</a></noscript></div></main><footer id=footer class=footer><div class=social-links><a href=http://github.com/%e5%90%8e%e7%ab%af%e4%be%a0 class="iconfont icon-github" title=github></a><a href=https://backendhouse.github.io/index.xml type=application/rss+xml class="iconfont icon-rss" title=rss></a></div><div class=copyright><span class=power-by>由 <a class=hexo-link href=https://gohugo.io>Hugo</a> 强力驱动</span>
+<span class=division>|</span>
+<span class=theme-info>主题 -
+<a class=theme-link href=https://github.com/olOwOlo/hugo-theme-even>Even</a></span>
+<span class=copyright-year>&copy;
+2017 -
+2021<span class=heart><i class="iconfont icon-heart"></i></span><span>后端侠</span></span></div></footer><div class=back-to-top id=back-to-top><i class="iconfont icon-up"></i></div></div><script src="/lib/highlight/highlight.pack.js?v=20171001"></script><script src=https://cdn.jsdelivr.net/npm/jquery@3.2.1/dist/jquery.min.js integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin=anonymous></script><script src=https://cdn.jsdelivr.net/npm/slideout@1.0.1/dist/slideout.min.js integrity="sha256-t+zJ/g8/KXIJMjSVQdnibt4dlaDxc9zXr/9oNPeWqdg=" crossorigin=anonymous></script><script src=https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.js integrity="sha256-XVLffZaxoWfGUEbdzuLi7pwaUJv1cecsQJQqGLe7axY=" crossorigin=anonymous></script><script type=text/javascript src=/js/main.min.c12618f9a600c40bd024996677e951e64d3487006775aeb22e200c990006c5c7.js></script></body></html>

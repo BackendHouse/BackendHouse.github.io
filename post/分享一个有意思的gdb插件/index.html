@@ -15,7 +15,7 @@ peda的输出分为三个框，一个显示寄存器状态，一个显示当前�
 ./a.out
 <span style=color:#bd93f9>10</span>
 </code></pre></div><p>可以看到i的结果为10。为什么会这样呢？我们逆向二进制<code>a.out</code>一探究竟</p><div class=highlight><pre style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash>gdb ./a.out
-</code></pre></div><p><img src=https://backendhouse.github.io/images/peda1.png alt=peda截图></p><p>核心代码如下，<code>i</code>从内存load到寄存器之后，先执行自增，然后先将自增结果11 save到内存，再将<code>i++</code>返回值10 save到内存，结果值11被10覆盖，最终i的值为10。</p><pre><code class=language-x86asm data-lang=x86asm>   0x00000000004007ea &lt;+8&gt;:	  mov    DWORD PTR [rbp-0x4],0xa   ; i = 10
+</code></pre></div><p><img src=https://backendhouse.github.io/images/peda2.png alt=peda截图></p><p>核心代码如下，<code>i</code>从内存load到寄存器之后，先执行自增，然后先将自增结果11 save到内存，再将<code>i++</code>返回值10 save到内存，结果值11被10覆盖，最终i的值为10。</p><pre><code class=language-x86asm data-lang=x86asm>   0x00000000004007ea &lt;+8&gt;:	  mov    DWORD PTR [rbp-0x4],0xa   ; i = 10
    0x00000000004007f1 &lt;+15&gt;:	mov    eax,DWORD PTR [rbp-0x4]   ; eax = i(10)
 =&gt; 0x00000000004007f4 &lt;+18&gt;:	lea    edx,[rax+0x1]             ; edx = 11
    0x00000000004007f7 &lt;+21&gt;:	mov    DWORD PTR [rbp-0x4],edx   ; i = edx(11)

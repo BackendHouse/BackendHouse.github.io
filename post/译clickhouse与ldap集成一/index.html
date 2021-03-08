@@ -1,0 +1,188 @@
+<!doctype html><html lang=zh-cn><head><meta charset=utf-8><meta http-equiv=x-ua-compatible content="IE=edge,chrome=1"><title>【译】Clickhouse与LDAP集成（一） - 后端技术小屋</title><meta name=renderer content="webkit"><meta name=viewport content="width=device-width,initial-scale=1,maximum-scale=1"><meta http-equiv=cache-control content="no-transform"><meta http-equiv=cache-control content="no-siteapp"><meta name=theme-color content="#f8f5ec"><meta name=msapplication-navbutton-color content="#f8f5ec"><meta name=apple-mobile-web-app-capable content="yes"><meta name=apple-mobile-web-app-status-bar-style content="#f8f5ec"><meta name=author content="后端侠"><meta name=description content="【译】Clickhouse与LDAP集成（一）"><meta name=keywords content="Hugo,theme,后端侠"><meta name=generator content="Hugo 0.62.2 with theme even"><link rel=canonical href=https://backendhouse.github.io/post/%E8%AF%91clickhouse%E4%B8%8Eldap%E9%9B%86%E6%88%90%E4%B8%80/><link rel=apple-touch-icon sizes=180x180 href=/apple-touch-icon.png><link rel=icon type=image/png sizes=32x32 href=/favicon-32x32.png><link rel=icon type=image/png sizes=16x16 href=/favicon-16x16.png><link rel=manifest href=/manifest.json><link rel=mask-icon href=/safari-pinned-tab.svg color=#5bbad5><link href=/sass/main.min.a2095472a2a8d7ddda1334cf60051cbe40ed55f2467554bb6aa4c17c9bcd27a4.css rel=stylesheet><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.css integrity="sha256-7TyXnr2YU040zfSP+rEcz29ggW4j56/ujTPwjMzyqFY=" crossorigin=anonymous><meta property="og:title" content="【译】Clickhouse与LDAP集成（一）"><meta property="og:description" content="【译】Clickhouse与LDAP集成（一）"><meta property="og:type" content="article"><meta property="og:url" content="https://backendhouse.github.io/post/%E8%AF%91clickhouse%E4%B8%8Eldap%E9%9B%86%E6%88%90%E4%B8%80/"><meta property="article:published_time" content="2021-03-08T14:23:08+08:00"><meta property="article:modified_time" content="2021-03-08T14:23:08+08:00"><meta itemprop=name content="【译】Clickhouse与LDAP集成（一）"><meta itemprop=description content="【译】Clickhouse与LDAP集成（一）"><meta itemprop=datePublished content="2021-03-08T14:23:08+08:00"><meta itemprop=dateModified content="2021-03-08T14:23:08+08:00"><meta itemprop=wordCount content="4515"><meta itemprop=keywords content="Clickhouse,"><meta name=twitter:card content="summary"><meta name=twitter:title content="【译】Clickhouse与LDAP集成（一）"><meta name=twitter:description content="【译】Clickhouse与LDAP集成（一）"><!--[if lte IE 9]><script src=https://cdnjs.cloudflare.com/ajax/libs/classlist/1.1.20170427/classList.min.js></script><![endif]--><!--[if lt IE 9]><script src=https://cdn.jsdelivr.net/npm/html5shiv@3.7.3/dist/html5shiv.min.js></script><script src=https://cdn.jsdelivr.net/npm/respond.js@1.4.2/dest/respond.min.js></script><![endif]--></head><body><div id=mobile-navbar class=mobile-navbar><div class=mobile-header-logo><a href=/ class=logo>后端技术小屋</a></div><div class=mobile-navbar-icon><span></span><span></span><span></span></div></div><nav id=mobile-menu class="mobile-menu slideout-menu"><ul class=mobile-menu-list><a href=/><li class=mobile-menu-item>Home</li></a><a href=/post/><li class=mobile-menu-item>Archives</li></a><a href=/tags/><li class=mobile-menu-item>Tags</li></a><a href=/categories/><li class=mobile-menu-item>Categories</li></a><a href=/about/><li class=mobile-menu-item>About</li></a></ul></nav><div class=container id=mobile-panel><header id=header class=header><div class=logo-wrapper><a href=/ class=logo>后端技术小屋</a></div><nav class=site-navbar><ul id=menu class=menu><li class=menu-item><a class=menu-item-link href=/>Home</a></li><li class=menu-item><a class=menu-item-link href=/post/>Archives</a></li><li class=menu-item><a class=menu-item-link href=/tags/>Tags</a></li><li class=menu-item><a class=menu-item-link href=/categories/>Categories</a></li><li class=menu-item><a class=menu-item-link href=/about/>About</a></li></ul></nav></header><main id=main class=main><div class=content-wrapper><div id=content class=content><article class=post><header class=post-header><h1 class=post-title>【译】Clickhouse与LDAP集成（一）</h1><div class=post-meta><span class=post-time>2021-03-08</span><div class=post-category><a href=/categories/clickhouse/>Clickhouse</a></div></div></header><div class=post-toc id=post-toc><h2 class=post-toc-title>文章目录</h2><div class="post-toc-content always-active"><nav id=TableOfContents><ul><li><a href=#测试环境>测试环境</a><ul><li><a href=#健全性检查>健全性检查</a></li></ul></li><li><a href=#在clickhouse中配置ldap服务器>在ClickHouse中配置LDAP服务器</a></li><li><a href=#使用ldap验证clickhouse用户>使用LDAP验证ClickHouse用户</a><ul><li><a href=#在usersxml中定义经过ldap-server验证的用户>在users.xml中定义经过LDAP Server验证的用户</a></li><li><a href=#使用rbac定义经过ldap-server验证的用户>使用RBAC定义经过LDAP Server验证的用户</a></li><li><a href=#在集群中使用rbac定义经过ldap-server验证的用户>在集群中使用RBAC定义经过LDAP Server验证的用户</a></li><li><a href=#优化ldap身份验证用户的登录>优化LDAP身份验证用户的登录</a></li></ul></li><li><a href=#结论>结论</a></li></ul></nav></div></div><div class=post-content><blockquote><p>更多精彩内容，请关注微信公众号：<strong>后端技术小屋</strong></p></blockquote><p>原文：https://altinity.com/blog/integrating-clickhouse-with-ldap-part-one
+作者：Vitaliy Zakaznikov</p><p>ClickHouse上一般使用XML文件来定义配置，其中包括用户配置。<code>users.xml</code>文件或在<code>/etc/clickhouse-server/users.d</code>目录中的配置文件都可用于定义用户及其相关属性，例如<code>profile</code>、<code>network restriction</code>、<code>quota</code>和<code>password</code>。这种方案在集群规模较小时比较有效，但是用来管理大规模集群却很费劲。主要存在三个主要问题：首先每次必须添加、修改或删除用户时，管理员必须手动编辑这些配置文件；其次，将密码和哈希值直接存储在用户配置文件中存在安全隐患；第三，为用户分配和管理角色是非常繁琐的。</p><p>ClickHouse现在已经解决了以上三个问题。通过引入对RBAC的支持，ClickHouse允许使用SQL语句管理用户和角色，而无需修改配置文件。但是即使使用<code>RBAC</code>，您仍然需要与组织内的其他服务分别管理用户和角色，相互之间无法打通，且密码仍然存储在文件系统中。</p><p>自2020年中以来，Altinity一直在努力添加ClickHouse对轻型目录访问协议（也称为LDAP）的支持。LDAP集中存储用户、密码及其在组织中角色，从而使得管理用户和权限的功能集中到一个地方。我们很高兴地宣布，ClickHouse支持LDAP身份验证和用户目录的特性已被合入社区，目前运行稳定且通用。我们已使用大多数Linux发行版中提供的常用OpenLDAP软件包对其进行了仔细的测试。</p><p>在这一系列博客文章中，我们将描述对LDAP集成的新支持如何帮助中大型组织将ClickHouse用户角色管理与其现有服务集成在一起。我们将介绍LDAP与Clickhouse的几种不同程度的集成，从使用LDAP验证ClickHouse用户，到通过外部用户目录完全集成LDAP并将选定的LDAP组映射到RBAC中的角色。</p><h1 id=测试环境>测试环境</h1><p>我们使用docker-compose集群来展示LDAP如何与ClickHouse集成。您可以在https://gitlab.com/altinity-public/blogs/ldap-integration-with-clickhouse上找到docker-compose环境，该环境中使用了yandex/clickhouse-server:21.1.2.15镜像</p><p>要使用该环境，需要在系统上安装<code>git</code>，<code>docker</code>和<code>docker-compose</code>。然后将包含测试环境的代码库克隆到本地。</p><div class=highlight><pre style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash>git clone https://gitlab.com/altinity-public/blogs/ldap-integration-with-clickhouse.git
+</code></pre></div><p>检查是否可以启动docker-compose集群。</p><div class=highlight><pre style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=color:#8be9fd;font-style:italic>cd</span>  ldap-integration-with-clickhouse
+<span style=color:#8be9fd;font-style:italic>cd</span> docker-compose/
+docker-compose up -d
+</code></pre></div><pre><code>Creating network &quot;docker-compose_default&quot; with the default driver
+Creating docker-compose_openldap1_1 ... done
+Creating docker-compose_zookeeper_1 ... done
+Creating docker-compose_clickhouse1_1 ... done
+Creating docker-compose_clickhouse3_1 ... done
+Creating docker-compose_clickhouse2_1 ... done
+Creating phpldapadmin                 ... done
+Creating docker-compose_all_services_ready_1 ... done
+</code></pre><p>如果启动成功会看到上面的日志，表明<code>openldap1</code>，<code>zookeeper</code>，<code>clickhouse1</code>，<code>clickhouse2</code>，<code>clickhouse3</code>和<code>phpldapadmin</code>这些服务已经正常运行。我们还可检查所有服务是否健康。</p><blockquote><p>请注意，您必须执行<code>docker-compose</code>目录下的所有docker-compose命令</p></blockquote><pre><code>docker-compose ps
+</code></pre><pre><code>               Name                              Command                  State                   Ports            
+-------------------------------------------------------------------------------------------------------------------
+docker-compose_all_services_ready_1   /hello                           Exit 0                                      
+docker-compose_clickhouse1_1          bash -c clickhouse server  ...   Up (healthy)   8123/tcp, 9000/tcp, 9009/tcp 
+docker-compose_clickhouse2_1          bash -c clickhouse server  ...   Up (healthy)   8123/tcp, 9000/tcp, 9009/tcp 
+docker-compose_clickhouse3_1          bash -c clickhouse server  ...   Up (healthy)   8123/tcp, 9000/tcp, 9009/tcp 
+docker-compose_openldap1_1            /container/tool/run --copy ...   Up (healthy)   389/tcp, 636/tcp             
+docker-compose_zookeeper_1            /docker-entrypoint.sh zkSe ...   Up (healthy)   2181/tcp, 2888/tcp, 3888/tcp 
+phpldapadmin                          /container/tool/run              Up (healthy)   443/tcp, 0.0.0.0:8080-&gt;80/tcp
+</code></pre><h2 id=健全性检查>健全性检查</h2><p>在继续之前我们做一些必要的健全性检查。首先，确保我们的OpenLDAP Server已启动并正在运行。我们可以执行搜索操作以查看在LDAP Server上定义好的用户</p><blockquote><p>再次注意，您必须执行<code>docker-compose</code>目录下的所有docker-compose命令。</p></blockquote><pre><code>docker-compose exec openldap1 bash -c 'ldapsearch -x -H ldap://localhost -b &quot;ou=users,dc=company,dc=com&quot; -D &quot;cn=admin,dc=company,dc=com&quot; -w admin'
+</code></pre><pre><code># extended LDIF
+#
+# LDAPv3
+# base &lt;ou=users,dc=company,dc=com&gt; with scope subtree
+# filter: (objectclass=*)
+# requesting: ALL
+#
+
+# users, company.com
+dn: ou=users,dc=company,dc=com
+objectClass: organizationalUnit
+objectClass: top
+ou: users
+
+# ldapuser, users, company.com
+dn: cn=ldapuser,ou=users,dc=company,dc=com
+cn: ldapuser
+gidNumber: 501
+givenName: John
+homeDirectory: /home/users/ldapuser
+objectClass: inetOrgPerson
+objectClass: posixAccount
+objectClass: top
+sn: User
+uid: ldapuser
+uidNumber: 1002
+userPassword:: bGRhcHVzZXI=
+
+# search result
+search: 2
+result: 0 Success
+
+# numResponses: 3
+# numEntries: 2
+</code></pre><p>可以看到，我们已经定义了一个用户：<code>cn=ldapuser,ou=users,dc=company,dc=com</code>。<code>ldapsearch</code>返回的数据中，<code>ldapuser</code>为用户名，密码设置为与用户名相同(仅用于测试)。</p><p>其次，确保ClickHouse服务能够正常执行查询。</p><pre><code>docker-compose exec clickhouse1 bash -c 'clickhouse-client -q &quot;SELECT version()&quot;'
+docker-compose exec clickhouse2 bash -c 'clickhouse-client -q &quot;SELECT version()&quot;'
+docker-compose exec clickhouse3 bash -c 'clickhouse-client -q &quot;SELECT version()&quot;'
+</code></pre><h1 id=在clickhouse中配置ldap服务器>在ClickHouse中配置LDAP服务器</h1><p>在将LDAP与ClickHouse进行集成之前，需要让ClickHouse知道哪里有可用的LDAP服务器以及如何连接它，Clickhouse甚至还可以添加多个LDAP Server的配置。为简单起见，我们将仅使用在docker-compose集群中的<code>openldap1</code>环境。接下来将配置文件添加到<code>/etc/clickhouse-server/config.d</code>目录中，以配置LDAP Server。</p><div class=highlight><pre style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash>docker-compose <span style=color:#8be9fd;font-style:italic>exec</span> clickhouse1 bash -c <span style=color:#f1fa8c>&#39;cat &lt;&lt;HEREDOC &gt; /etc/clickhouse-server/config.d/ldap_servers.xml
+</span><span style=color:#f1fa8c>&lt;?xml version=&#34;1.0&#34; encoding=&#34;utf-8&#34;?&gt;
+</span><span style=color:#f1fa8c>&lt;yandex&gt;
+</span><span style=color:#f1fa8c>  &lt;ldap_servers&gt;
+</span><span style=color:#f1fa8c>    &lt;!--LDAP servers b9f1f80c_6598_11eb_80c1_39d7fbdc1e26--&gt;
+</span><span style=color:#f1fa8c>    &lt;openldap1&gt;
+</span><span style=color:#f1fa8c>      &lt;host&gt;openldap1&lt;/host&gt;
+</span><span style=color:#f1fa8c>      &lt;port&gt;636&lt;/port&gt;
+</span><span style=color:#f1fa8c>      &lt;enable_tls&gt;yes&lt;/enable_tls&gt;
+</span><span style=color:#f1fa8c>      &lt;auth_dn_prefix&gt;cn=&lt;/auth_dn_prefix&gt;
+</span><span style=color:#f1fa8c>      &lt;auth_dn_suffix&gt;,ou=users,dc=company,dc=com&lt;/auth_dn_suffix&gt;
+</span><span style=color:#f1fa8c>      &lt;tls_require_cert&gt;never&lt;/tls_require_cert&gt;
+</span><span style=color:#f1fa8c>    &lt;/openldap1&gt;
+</span><span style=color:#f1fa8c>  &lt;/ldap_servers&gt;
+</span><span style=color:#f1fa8c>&lt;/yandex&gt;
+</span><span style=color:#f1fa8c>HEREDOC&#39;</span>
+</code></pre></div><p>接着检查<code>ldap_servers.xml</code>中的配置是否已合并到预处理的<code>config.xml</code>文件中。</p><div class=highlight><pre style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash>docker-compose <span style=color:#8be9fd;font-style:italic>exec</span> clickhouse1 bash -c <span style=color:#f1fa8c>&#39;cat /var/lib/clickhouse/preprocessed_configs/config.xml | grep LDAP&#39;</span>
+</code></pre></div><pre><code>    &lt;!--LDAP servers b9f1f80c_6598_11eb_80c1_39d7fbdc1e26--&gt;
+</code></pre><p>可以看到唯一标识字符串已经在预处理的<code>config.xml</code>文件中，说明LDAP Server配置已被Clickhouse成功加载。</p><h1 id=使用ldap验证clickhouse用户>使用LDAP验证ClickHouse用户</h1><p>ClickHouse与LDAP的第一级集成是允许使用LDAP Server对ClickHouse用户进行身份验证。这样我们就不必在Clickhouse中为用户明确指定密码，而是让ClickHouse请求LDAP Server进行用户身份验证。</p><h2 id=在usersxml中定义经过ldap-server验证的用户>在users.xml中定义经过LDAP Server验证的用户</h2><p>我们可将对应的配置文件添加到<code>/etc/clickhouse-server/users.d</code>目录中以新建Clickhouse用户，而不需要在配置中为其指定密码，转而用LDAP Server配置代替之。</p><pre><code>docker-compose exec clickhouse1 bash -c 'cat &lt;&lt;HEREDOC &gt; /etc/clickhouse-server/users.d/ldapuser.xml
+&lt;?xml version=&quot;1.0&quot; encoding=&quot;utf-8&quot;?&gt;
+&lt;yandex&gt;
+  &lt;users&gt;
+    &lt;!--LDAP users bb6f3d71_6598_11eb_80c1_39d7fbdc1e26--&gt;
+    &lt;ldapuser&gt;
+      &lt;ldap&gt;
+        &lt;server&gt;openldap1&lt;/server&gt;
+      &lt;/ldap&gt;
+    &lt;/ldapuser&gt;
+  &lt;/users&gt;
+&lt;/yandex&gt;
+HEREDOC'
+</code></pre><p>确认新增用户配置已合并到预处理的<code>users.xml</code>中。</p><pre><code>$ docker-compose exec clickhouse1 bash -c 'cat /var/lib/clickhouse/preprocessed_configs/users.xml | grep bb6f3d71_6598_11eb_80c1_39d7fbdc1e26'
+</code></pre><pre><code>    &lt;!--LDAP users bb6f3d71_6598_11eb_80c1_39d7fbdc1e26--&gt;
+</code></pre><p>现在我们使用<code>ldapuser</code>用户执行查询。</p><pre><code>docker-compose exec clickhouse1 bash -c 'clickhouse-client -n --user &quot;ldapuser&quot; --password &quot;ldapuser&quot; -q &quot;SELECT user()&quot;'
+</code></pre><pre><code>ldapuser
+</code></pre><p>有效了！现在我们试试用错误密码登录会不会验证失败？</p><pre><code>docker-compose exec clickhouse1 bash -c 'clickhouse-client -n --user &quot;ldapuser&quot; --password &quot;ldapuser2&quot; -q &quot;SELECT user()&quot;'
+</code></pre><pre><code>Code: 516. DB::Exception: Received from localhost:9000. DB::Exception: ldapuser: Authentication failed: password is incorrect or there is no user with such name.
+</code></pre><p>删除用户的配置文件，接下来我们改用RBAC定义Clickhouse用户</p><pre><code>docker-compose exec clickhouse1 bash -c 'rm -rf /etc/clickhouse-server/users.d/ldapuser.xml'
+</code></pre><h2 id=使用rbac定义经过ldap-server验证的用户>使用RBAC定义经过LDAP Server验证的用户</h2><p>在Clickhouse中，除XML配置文件之外，我们还可使用RBAC命令以更简单的方式定义用户。我们建议使用RBAC命令，因为您可使用<code>ON CLUSTER</code>语句在整个Clickhouse集群上创建或删除用户。</p><p>CREATE USER命令的语法定义如下。</p><pre><code>CREATE USER [IF NOT EXISTS | OR REPLACE] name1 [ON CLUSTER cluster_name1] 
+        [, name2 [ON CLUSTER cluster_name2] ...]
+    [IDENTIFIED [WITH {NO_PASSWORD|PLAINTEXT_PASSWORD|SHA256_PASSWORD|SHA256_HASH|DOUBLE_SHA1_PASSWORD|DOUBLE_SHA1_HASH}] BY {'password'|'hash'}]
+    [HOST {LOCAL | NAME 'name' | REGEXP 'name_regexp' | IP 'address' | LIKE 'pattern'} [,...] | ANY | NONE]
+    [DEFAULT ROLE role [,...]]
+    [SETTINGS variable [= value] [MIN [=] min_value] [MAX [=] max_value] [READONLY|WRITABLE] | PROFILE 'profile_name'] [,...]
+</code></pre><p>现在您还可以使用<code>IDENTIFIED WITH LDAP_SERVER</code>语句，绑定LDAP Server对该用户进行身份验证。</p><pre><code>docker-compose exec clickhouse1 bash -c 'clickhouse-client -q &quot;CREATE USER ldapuser IDENTIFIED WITH LDAP_SERVER BY '\''openldap1'\''&quot;'
+</code></pre><p>检查用户是否创建成功</p><pre><code>docker-compose exec clickhouse1 bash -c 'clickhouse-client -q &quot;SHOW USERS&quot;'
+</code></pre><pre><code>default
+ldapuser
+</code></pre><p>使用<code>ldapuser</code>用户执行查询。</p><pre><code>docker-compose exec clickhouse1 bash -c 'clickhouse-client -n --user &quot;ldapuser&quot; --password &quot;ldapuser&quot; -q &quot;SELECT user()&quot;'
+</code></pre><pre><code>ldapuser
+</code></pre><p>使用错误密码登录看看会不会报错</p><pre><code>docker-compose exec clickhouse1 bash -c 'clickhouse-client -n --user &quot;ldapuser&quot; --password &quot;ldapuser2&quot; -q &quot;SELECT user()&quot;'
+</code></pre><pre><code>Code: 516. DB::Exception: Received from localhost:9000. DB::Exception: ldapuser: Authentication failed: password is incorrect or there is no user with such name.
+</code></pre><h2 id=在集群中使用rbac定义经过ldap-server验证的用户>在集群中使用RBAC定义经过LDAP Server验证的用户</h2><p>RBAC命令允许在群集上创建或删除用户。现在我们将LDAP Server配置添加到其他两个ClickHouse节点：<code>clickhouse2</code>和<code>clickhouse3</code>中</p><p>首先，将LDAP Server配置添加到<code>clickhouse2</code>中</p><pre><code>docker-compose exec clickhouse2 bash -c 'cat &lt;&lt;HEREDOC &gt; /etc/clickhouse-server/config.d/ldap_servers.xml
+&lt;?xml version=&quot;1.0&quot; encoding=&quot;utf-8&quot;?&gt;
+&lt;yandex&gt;
+  &lt;ldap_servers&gt;
+    &lt;!--LDAP servers b9f1f80c_6598_11eb_80c1_39d7fbdc1e26--&gt;
+    &lt;openldap1&gt;
+      &lt;host&gt;openldap1&lt;/host&gt;
+      &lt;port&gt;636&lt;/port&gt;
+      &lt;enable_tls&gt;yes&lt;/enable_tls&gt;
+      &lt;auth_dn_prefix&gt;cn=&lt;/auth_dn_prefix&gt;
+      &lt;auth_dn_suffix&gt;,ou=users,dc=company,dc=com&lt;/auth_dn_suffix&gt;
+      &lt;tls_require_cert&gt;never&lt;/tls_require_cert&gt;
+    &lt;/openldap1&gt;
+  &lt;/ldap_servers&gt;
+&lt;/yandex&gt;
+HEREDOC'
+</code></pre><p>对<code>clickhouse3</code>也进行同样的操作</p><pre><code>docker-compose exec clickhouse3 bash -c 'cat &lt;&lt;HEREDOC &gt; /etc/clickhouse-server/config.d/ldap_servers.xml
+&lt;?xml version=&quot;1.0&quot; encoding=&quot;utf-8&quot;?&gt;
+&lt;yandex&gt;
+  &lt;ldap_servers&gt;
+    &lt;!--LDAP servers b9f1f80c_6598_11eb_80c1_39d7fbdc1e26--&gt;
+    &lt;openldap1&gt;
+      &lt;host&gt;openldap1&lt;/host&gt;
+      &lt;port&gt;636&lt;/port&gt;
+      &lt;enable_tls&gt;yes&lt;/enable_tls&gt;
+      &lt;auth_dn_prefix&gt;cn=&lt;/auth_dn_prefix&gt;
+      &lt;auth_dn_suffix&gt;,ou=users,dc=company,dc=com&lt;/auth_dn_suffix&gt;
+      &lt;tls_require_cert&gt;never&lt;/tls_require_cert&gt;
+    &lt;/openldap1&gt;
+  &lt;/ldap_servers&gt;
+&lt;/yandex&gt;
+HEREDOC'
+</code></pre><p>现在，我们将<code>ON CLUSTER</code>子句添加到<code>CREATE USER</code>命令中，在集群上创建<code>ldapuser</code>用户</p><pre><code>docker-compose exec clickhouse1 bash -c 'clickhouse-client -q &quot;CREATE USER IF NOT EXISTS ldapuser IDENTIFIED WITH LDAP_SERVER BY '\''openldap1'\'' ON CLUSTER '\''replicated_cluster'\''&quot;'
+</code></pre><pre><code>clickhouse2	9000	0		2	0
+clickhouse1	9000	0		1	0
+clickhouse3	9000	0		0	0
+</code></pre><p>现在，我们以<code>ldapuser</code>用户登录到集群的每个节点上执行命令。</p><pre><code>docker-compose exec clickhouse1 bash -c 'clickhouse-client -n --user &quot;ldapuser&quot; --password &quot;ldapuser&quot; -q &quot;SELECT user()&quot;'
+docker-compose exec clickhouse2 bash -c 'clickhouse-client -n --user &quot;ldapuser&quot; --password &quot;ldapuser&quot; -q &quot;SELECT user()&quot;'
+docker-compose exec clickhouse3 bash -c 'clickhouse-client -n --user &quot;ldapuser&quot; --password &quot;ldapuser&quot; -q &quot;SELECT user()&quot;'
+</code></pre><h2 id=优化ldap身份验证用户的登录>优化LDAP身份验证用户的登录</h2><p>在使用LDAP Server对用户进行身份验证后，每次用户登录Clickhouse时，ClickHouse都必须请求LDAP Server来对该用户进行验证。当许多用户都需要身份验证时，这可能不是最佳选择。为了解决此问题，我们可在Clickhouse的LDAP Server配置中使用<code>&lt;verification_cooldown></code>参数，该参数指定一次成功登录之后的时间（单位：秒）：在此期间，对于连续请求中的用户，我们将假定其已被成功验证, 这样就无需每次都请求LDAP Server。默认情况下，此参数为0，表示禁用缓存，即每次用户登录时Clickhouse都会请求LDAP Server进行身份验证。</p><p>当前缓存已被禁用。我们在<code>clickhouse1</code>上进行基准测试：</p><pre><code>docker-compose exec clickhouse1 bash -c 'time for n in {1..1000}; do clickhouse-client -n --user &quot;ldapuser&quot; --password &quot;ldapuser&quot; -q &quot;SELECT 1&quot; &gt; /dev/null; done'
+</code></pre><pre><code>real  0m30.189s
+user  0m14.492s
+sys   0m9.847s
+</code></pre><p>接着我们在<code>clickhouse1</code>上更改<code>&lt;verification_cooldown></code>参数，改成5分钟</p><pre><code>docker-compose exec clickhouse1 bash -c 'cat &lt;&lt;HEREDOC &gt; /etc/clickhouse-server/config.d/ldap_servers.xml
+&lt;?xml version=&quot;1.0&quot; encoding=&quot;utf-8&quot;?&gt;
+&lt;yandex&gt;
+  &lt;ldap_servers&gt;
+    &lt;!--LDAP servers b9f1f80c_6598_11eb_80c1_39d7fbdc1e26--&gt;
+    &lt;openldap1&gt;
+      &lt;host&gt;openldap1&lt;/host&gt;
+      &lt;port&gt;636&lt;/port&gt;
+      &lt;enable_tls&gt;yes&lt;/enable_tls&gt;
+      &lt;verification_cooldown&gt;300&lt;/verification_cooldown&gt;
+      &lt;auth_dn_prefix&gt;cn=&lt;/auth_dn_prefix&gt;
+      &lt;auth_dn_suffix&gt;,ou=users,dc=company,dc=com&lt;/auth_dn_suffix&gt;
+      &lt;tls_require_cert&gt;never&lt;/tls_require_cert&gt;
+    &lt;/openldap1&gt;
+  &lt;/ldap_servers&gt;
+&lt;/yandex&gt;
+HEREDOC'
+</code></pre><p>启用缓存之后，基准测试结果如下：</p><pre><code>docker-compose exec clickhouse1 bash -c 'time for n in {1..1000}; do clickhouse-client -n --user &quot;ldapuser&quot; --password &quot;ldapuser&quot; -q &quot;SELECT 1&quot; &gt; /dev/null; done'
+</code></pre><pre><code>real  0m22.472s
+user  0m12.000s
+sys   0m8.894s
+</code></pre><p>如上所示，通过降低Clickhouse重复请求LDAP Server进行身份验证的开销，我们使用户登录性能提高了约26%。</p><h1 id=结论>结论</h1><p>在本文中，我们介绍了对LDAP与ClickHouse集成的支持。我们研究了如何将LDAP Server配置添加到ClickHouse中。我们还研究了最简单的情况，即使用LDAP Sever对Clickhouse中定义的用户进行身份验证，无论用户是管理员通过XML文件或RBAC命令配置的。RBAC命令提供对<code>ON CLUSTER</code>语句的支持，有了<code>ON CLUSTER</code>可在整个集群上创建或删除用户，而无需修改集群中每个节点的配置文件。最后，我们研究了如何启用LDAP用户身份验证的缓存以优化用户重复登录Clickhouse的性能。</p><p>请继续关注下一部分，我们将讨论如何将LDAP Server用作外部用户目录，从而无需在ClickHouse中定义用户。如果您还有其他疑问或想讨论您的安全需求，请随时通过info@altinity.com与我们联系。我们很乐意为您提供帮助！</p><blockquote><p><strong>推荐阅读</strong></p></blockquote><ul><li><a href=https://mp.weixin.qq.com/s/rI8eO1VVGmTQaMyMLOHK8g>一文读懂clickhouse集群监控</a></li><li><a href=https://mp.weixin.qq.com/s/Vv8rIogerep5gX84psVZlA>30分钟入门Vim</a></li><li><a href=https://mp.weixin.qq.com/s/cXmElKvz2WR5agUN11WFUQ>30分钟入门GDB</a></li><li><a href=https://mp.weixin.qq.com/s/dT3lCxkLliGgSRzSvXYxag>STL源码分析&ndash;vector</a></li><li><a href=https://mp.weixin.qq.com/s/T7i0V2hcVU3HDO7DanPuGg>zookeeper client原理总结</a></li><li><a href=https://mp.weixin.qq.com/s/DQyUboTacgB3c_9iFi-aUw>redis实现分布式锁</a></li><li><a href=https://mp.weixin.qq.com/s/S6cSgzHTjUOR9AhixPjnWA>推荐几个好用的效率神器</a></li><li><a href=https://mp.weixin.qq.com/s/sJoQAx6xk4lOlZMouayT-Q>C/C++关键字之restrict</a></li><li><a href=https://mp.weixin.qq.com/s/qM_gf_aW_aKFhIK6PZTYEA>现代C++之右值语义</a></li><li><a href=https://mp.weixin.qq.com/s/LBnsNeUBf34rZrewlblzcA>Python乱码九问</a></li><li><a href=https://mp.weixin.qq.com/s/Fux7QEtVeu-Zlde0aMnTNQ>Linux Shell脚本攻略读书笔记</a></li></ul><blockquote><p>更多精彩内容，请扫码关注微信公众号：<strong>后端技术小屋</strong>。如果觉得文章对你有帮助的话，请多多分享、转发、在看。</p></blockquote><p><img src=https://backendhouse.github.io/images/qrcode.png alt=二维码></p></div><div class=post-copyright><p class=copyright-item><span class=item-title>文章作者</span>
+<span class=item-content>后端侠</span></p><p class=copyright-item><span class=item-title>上次更新</span>
+<span class=item-content>2021-03-08</span></p></div><footer class=post-footer><div class=post-tags><a href=/tags/clickhouse/>Clickhouse</a></div><nav class=post-nav><a class=next href=/post/zookeeper%E6%BA%90%E7%A0%81%E7%BC%96%E8%AF%91%E6%89%93%E5%8C%85%E4%B8%8E%E9%80%86%E5%90%91%E5%B7%A5%E7%A8%8B/><span class="next-text nav-default">Zookeeper源码编译打包与逆向工程</span>
+<span class="next-text nav-mobile">下一篇</span>
+<i class="iconfont icon-right"></i></a></nav></footer></article></div><div id=comments-gitment></div><link rel=stylesheet href=https://cdn.jsdelivr.net/gh/theme-next/theme-next-gitment@1/default.min.css crossorigin=anonymous><script src=https://cdn.jsdelivr.net/gh/theme-next/theme-next-gitment@1/gitment.browser.min.js crossorigin=anonymous></script><script type=text/javascript>var gitment=new Gitment({id:'2021-03-08 14:23:08 \x2b0800 \x2b0800',title:'【译】Clickhouse与LDAP集成（一）',link:decodeURI(location.href),desc:'更多精彩内容，请关注微信公众号：后端技术小屋 原文：https:\/\/altinity.com\/blog\/integrating-clickho',owner:'后端侠',repo:'后端侠.github.io',oauth:{client_id:'ec65a8719513fe7b4d9a',client_secret:'5b43d6e7f7b971b4ee51e9417332acf93c4165ec'}});gitment.render('comments-gitment');</script><noscript>Please enable JavaScript to view the <a href=https://github.com/imsun/gitment>comments powered by gitment.</a></noscript></div></main><footer id=footer class=footer><div class=social-links><a href=http://github.com/%e5%90%8e%e7%ab%af%e4%be%a0 class="iconfont icon-github" title=github></a><a href=https://backendhouse.github.io/index.xml type=application/rss+xml class="iconfont icon-rss" title=rss></a></div><div class=copyright><span class=power-by>由 <a class=hexo-link href=https://gohugo.io>Hugo</a> 强力驱动</span>
+<span class=division>|</span>
+<span class=theme-info>主题 -
+<a class=theme-link href=https://github.com/olOwOlo/hugo-theme-even>Even</a></span>
+<span class=copyright-year>&copy;
+2017 -
+2021<span class=heart><i class="iconfont icon-heart"></i></span><span>后端侠</span></span></div></footer><div class=back-to-top id=back-to-top><i class="iconfont icon-up"></i></div></div><script src="/lib/highlight/highlight.pack.js?v=20171001"></script><script src=https://cdn.jsdelivr.net/npm/jquery@3.2.1/dist/jquery.min.js integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin=anonymous></script><script src=https://cdn.jsdelivr.net/npm/slideout@1.0.1/dist/slideout.min.js integrity="sha256-t+zJ/g8/KXIJMjSVQdnibt4dlaDxc9zXr/9oNPeWqdg=" crossorigin=anonymous></script><script src=https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.js integrity="sha256-XVLffZaxoWfGUEbdzuLi7pwaUJv1cecsQJQqGLe7axY=" crossorigin=anonymous></script><script type=text/javascript src=/js/main.min.c12618f9a600c40bd024996677e951e64d3487006775aeb22e200c990006c5c7.js></script></body></html>

@@ -1,0 +1,273 @@
+<!doctype html><html lang=zh-cn><head><meta charset=utf-8><meta http-equiv=x-ua-compatible content="IE=edge,chrome=1"><title>Boltdb学习笔记之〇--存储管理 - 后端技术小屋</title><meta name=renderer content="webkit"><meta name=viewport content="width=device-width,initial-scale=1,maximum-scale=1"><meta http-equiv=cache-control content="no-transform"><meta http-equiv=cache-control content="no-siteapp"><meta name=theme-color content="#f8f5ec"><meta name=msapplication-navbutton-color content="#f8f5ec"><meta name=apple-mobile-web-app-capable content="yes"><meta name=apple-mobile-web-app-status-bar-style content="#f8f5ec"><meta name=author content="后端侠"><meta name=description content="Boltdb学习笔记之〇--存储管理"><meta name=keywords content="Hugo,theme,后端侠"><meta name=generator content="Hugo 0.62.2 with theme even"><link rel=canonical href=https://backendhouse.github.io/topost/boltdb1/><link rel=apple-touch-icon sizes=180x180 href=/apple-touch-icon.png><link rel=icon type=image/png sizes=32x32 href=/favicon-32x32.png><link rel=icon type=image/png sizes=16x16 href=/favicon-16x16.png><link rel=manifest href=/manifest.json><link rel=mask-icon href=/safari-pinned-tab.svg color=#5bbad5><link href=/sass/main.min.a2095472a2a8d7ddda1334cf60051cbe40ed55f2467554bb6aa4c17c9bcd27a4.css rel=stylesheet><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.css integrity="sha256-7TyXnr2YU040zfSP+rEcz29ggW4j56/ujTPwjMzyqFY=" crossorigin=anonymous><meta property="og:title" content="Boltdb学习笔记之〇--存储管理"><meta property="og:description" content="Boltdb学习笔记之〇--存储管理"><meta property="og:type" content="article"><meta property="og:url" content="https://backendhouse.github.io/topost/boltdb1/"><meta property="article:published_time" content="2021-03-20T09:24:05+08:00"><meta property="article:modified_time" content="2021-03-20T09:24:05+08:00"><meta itemprop=name content="Boltdb学习笔记之〇--存储管理"><meta itemprop=description content="Boltdb学习笔记之〇--存储管理"><meta itemprop=datePublished content="2021-03-20T09:24:05+08:00"><meta itemprop=dateModified content="2021-03-20T09:24:05+08:00"><meta itemprop=wordCount content="4657"><meta itemprop=keywords content="数据库,boltdb,"><meta name=twitter:card content="summary"><meta name=twitter:title content="Boltdb学习笔记之〇--存储管理"><meta name=twitter:description content="Boltdb学习笔记之〇--存储管理"><!--[if lte IE 9]><script src=https://cdnjs.cloudflare.com/ajax/libs/classlist/1.1.20170427/classList.min.js></script><![endif]--><!--[if lt IE 9]><script src=https://cdn.jsdelivr.net/npm/html5shiv@3.7.3/dist/html5shiv.min.js></script><script src=https://cdn.jsdelivr.net/npm/respond.js@1.4.2/dest/respond.min.js></script><![endif]--></head><body><div id=mobile-navbar class=mobile-navbar><div class=mobile-header-logo><a href=/ class=logo>后端技术小屋</a></div><div class=mobile-navbar-icon><span></span><span></span><span></span></div></div><nav id=mobile-menu class="mobile-menu slideout-menu"><ul class=mobile-menu-list><a href=/><li class=mobile-menu-item>Home</li></a><a href=/post/><li class=mobile-menu-item>Archives</li></a><a href=/tags/><li class=mobile-menu-item>Tags</li></a><a href=/categories/><li class=mobile-menu-item>Categories</li></a><a href=/about/><li class=mobile-menu-item>About</li></a></ul></nav><div class=container id=mobile-panel><header id=header class=header><div class=logo-wrapper><a href=/ class=logo>后端技术小屋</a></div><nav class=site-navbar><ul id=menu class=menu><li class=menu-item><a class=menu-item-link href=/>Home</a></li><li class=menu-item><a class=menu-item-link href=/post/>Archives</a></li><li class=menu-item><a class=menu-item-link href=/tags/>Tags</a></li><li class=menu-item><a class=menu-item-link href=/categories/>Categories</a></li><li class=menu-item><a class=menu-item-link href=/about/>About</a></li></ul></nav></header><main id=main class=main><div class=content-wrapper><div id=content class=content><article class=post><div class=post-content><blockquote><p>更多精彩内容，请关注微信公众号：<strong>后端技术小屋</strong></p></blockquote><h2 id=磁盘和内存的管理>磁盘和内存的管理</h2><p>磁盘是持久化存储，内存是非持久化存储。当数据库执行查询时，会以page为单位的读取磁盘上的数据库文件，并同步到内存中。当数据库执行写入操作时，也会以page为单位将内存中的结果flush到磁盘中。数据库关于如何管理磁盘和内存中数据的同步，主要有两种选择</p><ul><li>选择一：依赖Linux操作系统mmap系统调用，将磁盘文件映射到进程的地址空间。此时对于进程来说，读写内存即读写磁盘，此过程完全依赖操作系统。</li><li>选择二：数据库自行管理磁盘和内存之间的数据同步。</li></ul><p>选择一的好处是可大大减小数据库实现的复杂度，因为何时何地读写磁盘完全由操作系统负责，对数据库应用是透明的。坏处是，操作系统是所有进程共用的，其他进程会对数据库进程有影响；另外容易发生page fault导致stall, 数据库完成query的时间不可控；另外数据库依赖操作系统的实现，影响可移植性</p><p>选择二的好处是去除了对操作系统的依赖，自行实现磁盘和内存同步使很多优化变成了可能，例如direct IO和prefetch。坏处是实现起来比较复杂，需要考虑很多细节问题，例如内存缓冲区多大，满了之后flush哪个page到磁盘等</p><p>boltdb中选择了一种折中的方案，只有读取磁盘通过mmap, 写入磁盘则由自己控制。</p><h3 id=读磁盘>读磁盘</h3><p>在boltdb中，用户新建db时需要指定一个数据库文件的路径（你没看错，boltdb中一个db对应一个文件）。</p><div class=highlight><pre style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-golang data-lang=golang><span style=color:#6272a4>// Open creates and opens a database at the given path.
+</span><span style=color:#6272a4></span><span style=color:#6272a4>// If the file does not exist then it will be created automatically.
+</span><span style=color:#6272a4></span><span style=color:#6272a4>// Passing in nil options will cause Bolt to open the database with the default options.
+</span><span style=color:#6272a4></span><span style=color:#8be9fd;font-style:italic>func</span> <span style=color:#50fa7b>Open</span>(path <span style=color:#8be9fd>string</span>, mode os.FileMode, options <span style=color:#ff79c6>*</span>Options) (<span style=color:#ff79c6>*</span>DB, <span style=color:#8be9fd>error</span>) {
+	<span style=color:#8be9fd;font-style:italic>var</span> db = <span style=color:#ff79c6>&amp;</span>DB{opened: <span style=color:#ff79c6>true</span>}
+  <span style=color:#ff79c6>...</span>
+}
+</code></pre></div><p>接着执行mmap建立内存映射</p><div class=highlight><pre style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-golang data-lang=golang>	<span style=color:#6272a4>// Memory map the data file.
+</span><span style=color:#6272a4></span>	<span style=color:#ff79c6>if</span> err <span style=color:#ff79c6>:=</span> db.<span style=color:#50fa7b>mmap</span>(options.InitialMmapSize); err <span style=color:#ff79c6>!=</span> <span style=color:#ff79c6>nil</span> {
+		_ = db.<span style=color:#8be9fd;font-style:italic>close</span>()
+		<span style=color:#ff79c6>return</span> <span style=color:#ff79c6>nil</span>, err
+	}
+</code></pre></div><p><code>DB</code>中的<code>dataref</code>和<code>data</code>记录了<code>mmap</code>返回的内存缓冲区的地址</p><div class=highlight><pre style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-golang data-lang=golang><span style=color:#8be9fd;font-style:italic>type</span> DB <span style=color:#8be9fd;font-style:italic>struct</span> {
+  <span style=color:#ff79c6>...</span>
+  dataref  []<span style=color:#8be9fd>byte</span>   <span style=color:#6272a4>// mmap&#39;ed readonly, write throws SEGV
+</span><span style=color:#6272a4></span>	data     <span style=color:#ff79c6>*</span>[maxMapSize]<span style=color:#8be9fd>byte</span>
+  <span style=color:#ff79c6>...</span>
+}
+</code></pre></div><p>在成功建立内存映射关系之后，后续所有的读磁盘操作都转化为对<code>DB.data</code>的访问。<code>DB.page</code>函数输入参数为<code>pageid</code>, 从内存映射缓冲区<code>data</code>中读取并返回对应的<code>page</code>对象。</p><div class=highlight><pre style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-golang data-lang=golang><span style=color:#6272a4>// page retrieves a page reference from the mmap based on the current page size.
+</span><span style=color:#6272a4></span><span style=color:#8be9fd;font-style:italic>func</span> (db <span style=color:#ff79c6>*</span>DB) <span style=color:#50fa7b>page</span>(id pgid) <span style=color:#ff79c6>*</span>page {
+	pos <span style=color:#ff79c6>:=</span> id <span style=color:#ff79c6>*</span> <span style=color:#50fa7b>pgid</span>(db.pageSize)
+	<span style=color:#ff79c6>return</span> (<span style=color:#ff79c6>*</span>page)(unsafe.<span style=color:#50fa7b>Pointer</span>(<span style=color:#ff79c6>&amp;</span>db.data[pos]))
+}
+</code></pre></div><h2 id=写磁盘>写磁盘</h2><p>至于写磁盘操作，则通过调用<code>DB.ops.WriteAt</code>完成，其初始化如下，<code>db.file.WriteAt</code>是golang标准库提供的写文件方法</p><div class=highlight><pre style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-golang data-lang=golang>	<span style=color:#6272a4>// Default values for test hooks
+</span><span style=color:#6272a4></span>	db.ops.writeAt = db.file.WriteAt
+</code></pre></div><p>在写事务中会调用<code>DB.ops.WriteAt</code>, 并使用<code>fdatasync</code>将内核缓冲区数据全部flush到磁盘中。</p><div class=highlight><pre style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-golang data-lang=golang><span style=color:#6272a4>// writeMeta writes the meta to the disk.
+</span><span style=color:#6272a4></span><span style=color:#8be9fd;font-style:italic>func</span> (tx <span style=color:#ff79c6>*</span>Tx) <span style=color:#50fa7b>writeMeta</span>() <span style=color:#8be9fd>error</span> {
+	<span style=color:#6272a4>// Create a temporary buffer for the meta page.
+</span><span style=color:#6272a4></span>	buf <span style=color:#ff79c6>:=</span> <span style=color:#8be9fd;font-style:italic>make</span>([]<span style=color:#8be9fd>byte</span>, tx.db.pageSize)
+	p <span style=color:#ff79c6>:=</span> tx.db.<span style=color:#50fa7b>pageInBuffer</span>(buf, <span style=color:#bd93f9>0</span>)
+	tx.meta.<span style=color:#50fa7b>write</span>(p)
+
+	<span style=color:#6272a4>// Write the meta page to file.
+</span><span style=color:#6272a4></span>	<span style=color:#ff79c6>if</span> _, err <span style=color:#ff79c6>:=</span> tx.db.ops.<span style=color:#50fa7b>writeAt</span>(buf, <span style=color:#8be9fd;font-style:italic>int64</span>(p.id)<span style=color:#ff79c6>*</span><span style=color:#8be9fd;font-style:italic>int64</span>(tx.db.pageSize)); err <span style=color:#ff79c6>!=</span> <span style=color:#ff79c6>nil</span> {
+		<span style=color:#ff79c6>return</span> err
+	}
+  <span style=color:#ff79c6>if</span> !tx.db.NoSync <span style=color:#ff79c6>||</span> IgnoreNoSync {
+		<span style=color:#ff79c6>if</span> err <span style=color:#ff79c6>:=</span> <span style=color:#50fa7b>fdatasync</span>(tx.db); err <span style=color:#ff79c6>!=</span> <span style=color:#ff79c6>nil</span> {
+			<span style=color:#ff79c6>return</span> err
+		}
+	}
+  <span style=color:#ff79c6>...</span>
+}
+</code></pre></div><p>而随着写入的增加，渐渐的db文件大小变得不够用，这时候需要对db文件进行扩容。如下所示，首先计算扩容后的新大小，然后调用<code>Truncate</code>对文件扩容，最后调用<code>Sync</code>将相关元数据同步到文件系统中。</p><div class=highlight><pre style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-golang data-lang=golang><span style=color:#6272a4>// grow grows the size of the database to the given sz.
+</span><span style=color:#6272a4></span><span style=color:#8be9fd;font-style:italic>func</span> (db <span style=color:#ff79c6>*</span>DB) <span style=color:#50fa7b>grow</span>(sz <span style=color:#8be9fd>int</span>) <span style=color:#8be9fd>error</span> {
+	<span style=color:#6272a4>// Ignore if the new size is less than available file size.
+</span><span style=color:#6272a4></span>	<span style=color:#ff79c6>if</span> sz <span style=color:#ff79c6>&lt;=</span> db.filesz {
+		<span style=color:#ff79c6>return</span> <span style=color:#ff79c6>nil</span>
+	}
+
+	<span style=color:#6272a4>// If the data is smaller than the alloc size then only allocate what&#39;s needed.
+</span><span style=color:#6272a4></span>	<span style=color:#6272a4>// Once it goes over the allocation size then allocate in chunks.
+</span><span style=color:#6272a4></span>	<span style=color:#ff79c6>if</span> db.datasz &lt; db.AllocSize {
+		sz = db.datasz
+	} <span style=color:#ff79c6>else</span> {
+		sz <span style=color:#ff79c6>+=</span> db.AllocSize
+	}
+
+	<span style=color:#6272a4>// Truncate and fsync to ensure file size metadata is flushed.
+</span><span style=color:#6272a4></span>	<span style=color:#6272a4>// https://github.com/boltdb/bolt/issues/284
+</span><span style=color:#6272a4></span>	<span style=color:#ff79c6>if</span> !db.NoGrowSync <span style=color:#ff79c6>&amp;&amp;</span> !db.readOnly {
+		<span style=color:#ff79c6>if</span> runtime.GOOS <span style=color:#ff79c6>!=</span> <span style=color:#f1fa8c>&#34;windows&#34;</span> {
+			<span style=color:#ff79c6>if</span> err <span style=color:#ff79c6>:=</span> db.file.<span style=color:#50fa7b>Truncate</span>(<span style=color:#8be9fd;font-style:italic>int64</span>(sz)); err <span style=color:#ff79c6>!=</span> <span style=color:#ff79c6>nil</span> {
+				<span style=color:#ff79c6>return</span> fmt.<span style=color:#50fa7b>Errorf</span>(<span style=color:#f1fa8c>&#34;file resize error: %s&#34;</span>, err)
+			}
+		}
+		<span style=color:#ff79c6>if</span> err <span style=color:#ff79c6>:=</span> db.file.<span style=color:#50fa7b>Sync</span>(); err <span style=color:#ff79c6>!=</span> <span style=color:#ff79c6>nil</span> {
+			<span style=color:#ff79c6>return</span> fmt.<span style=color:#50fa7b>Errorf</span>(<span style=color:#f1fa8c>&#34;file sync error: %s&#34;</span>, err)
+		}
+	}
+
+	db.filesz = sz
+	<span style=color:#ff79c6>return</span> <span style=color:#ff79c6>nil</span>
+}
+
+</code></pre></div><h2 id=page>page</h2><p>page是磁盘和内存之间进行数据同步的最小单位。boltdb中的page大小默认为操作系统中内存页的大小，一般为4 KB.</p><div class=highlight><pre style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash>$ getconf PAGESIZE
+<span style=color:#bd93f9>4096</span>
+</code></pre></div><p>在boltdb中，page定义如下：</p><div class=highlight><pre style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-golang data-lang=golang><span style=color:#8be9fd;font-style:italic>const</span> (
+	branchPageFlag   = <span style=color:#bd93f9>0x01</span>
+	leafPageFlag     = <span style=color:#bd93f9>0x02</span>
+	metaPageFlag     = <span style=color:#bd93f9>0x04</span>
+	freelistPageFlag = <span style=color:#bd93f9>0x10</span>
+)
+
+<span style=color:#8be9fd;font-style:italic>type</span> pgid <span style=color:#8be9fd>uint64</span>
+
+<span style=color:#8be9fd;font-style:italic>type</span> page <span style=color:#8be9fd;font-style:italic>struct</span> {
+	id       pgid
+	flags    <span style=color:#8be9fd>uint16</span>
+	count    <span style=color:#8be9fd>uint16</span>
+	overflow <span style=color:#8be9fd>uint32</span>
+	ptr      <span style=color:#8be9fd>uintptr</span>
+}
+</code></pre></div><p>其中数据成员如下：</p><ul><li>id: boltdb中每个page都有一个唯一的id。类型为<code>pgid</code>, 实际上是<code>uint64</code>。page id在磁盘上按照空间顺序递增，即db文件中第一个page的id是0， 第二个page的id是1，以此类推。通过这样的设计，知晓了page id便可得到对应page在db文件中的位置：<code>pageSize * (id - 1)</code></li><li>flags: page类型。page按照功能的不同，分为meta page, free list page, branch page和leaf page。稍后我们会一一提到。</li><li>count: page中包含的数据条数。该参数对meta page无意义。对于freelist来说，count表示其中空间page id数量与待释放page id数量之和。对于branch page来说，count表示其中key的数量，对于leaf page，count表示其中key/value对的数量。</li><li>overflow: 如果当前页面还不够存放数据，就会有后续页面，这个字段表示后续页面的数量。</li><li>ptr: 指向page数据区域的指针。</li></ul><p>重要接口：</p><ul><li>typ: 返回page类型。</li></ul><p>看完了page结构，那么db文件中不同类型的page是如何排列的呢？
+从下面的代码中可看到，boltdb在初始化db文件时，首先生成两个meta page, page id分别是0和1。接着生成一个freelist page, page id为2，最后生成一个空的leaf page, page id为3。</p><div class=highlight><pre style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-golang data-lang=golang><span style=color:#6272a4>// init creates a new database file and initializes its meta pages.
+</span><span style=color:#6272a4></span><span style=color:#8be9fd;font-style:italic>func</span> (db <span style=color:#ff79c6>*</span>DB) <span style=color:#50fa7b>init</span>() <span style=color:#8be9fd>error</span> {
+	<span style=color:#6272a4>// Set the page size to the OS page size.
+</span><span style=color:#6272a4></span>	db.pageSize = os.<span style=color:#50fa7b>Getpagesize</span>()
+
+	<span style=color:#6272a4>// Create two meta pages on a buffer.
+</span><span style=color:#6272a4></span>	buf <span style=color:#ff79c6>:=</span> <span style=color:#8be9fd;font-style:italic>make</span>([]<span style=color:#8be9fd>byte</span>, db.pageSize<span style=color:#ff79c6>*</span><span style=color:#bd93f9>4</span>)
+	<span style=color:#ff79c6>for</span> i <span style=color:#ff79c6>:=</span> <span style=color:#bd93f9>0</span>; i &lt; <span style=color:#bd93f9>2</span>; i<span style=color:#ff79c6>++</span> {
+		p <span style=color:#ff79c6>:=</span> db.<span style=color:#50fa7b>pageInBuffer</span>(buf[:], <span style=color:#50fa7b>pgid</span>(i))
+		p.id = <span style=color:#50fa7b>pgid</span>(i)
+		p.flags = metaPageFlag
+
+		<span style=color:#6272a4>// Initialize the meta page.
+</span><span style=color:#6272a4></span>		m <span style=color:#ff79c6>:=</span> p.<span style=color:#50fa7b>meta</span>()
+		m.magic = magic
+		m.version = version
+		m.pageSize = <span style=color:#8be9fd;font-style:italic>uint32</span>(db.pageSize)
+		m.freelist = <span style=color:#bd93f9>2</span>
+		m.root = bucket{root: <span style=color:#bd93f9>3</span>}
+		m.pgid = <span style=color:#bd93f9>4</span>
+		m.txid = <span style=color:#50fa7b>txid</span>(i)
+		m.checksum = m.<span style=color:#50fa7b>sum64</span>()
+	}
+
+	<span style=color:#6272a4>// Write an empty freelist at page 3.
+</span><span style=color:#6272a4></span>	p <span style=color:#ff79c6>:=</span> db.<span style=color:#50fa7b>pageInBuffer</span>(buf[:], <span style=color:#50fa7b>pgid</span>(<span style=color:#bd93f9>2</span>))
+	p.id = <span style=color:#50fa7b>pgid</span>(<span style=color:#bd93f9>2</span>)
+	p.flags = freelistPageFlag
+	p.count = <span style=color:#bd93f9>0</span>
+
+	<span style=color:#6272a4>// Write an empty leaf page at page 4.
+</span><span style=color:#6272a4></span>	p = db.<span style=color:#50fa7b>pageInBuffer</span>(buf[:], <span style=color:#50fa7b>pgid</span>(<span style=color:#bd93f9>3</span>))
+	p.id = <span style=color:#50fa7b>pgid</span>(<span style=color:#bd93f9>3</span>)
+	p.flags = leafPageFlag
+	p.count = <span style=color:#bd93f9>0</span>
+
+  <span style=color:#ff79c6>...</span>
+}
+</code></pre></div><p>todo 加个图</p><h3 id=meta-page>meta page</h3><p>todo 加个图</p><p>todo meta有两个</p><p>当<code>page</code>中的flags等于<code>metaPageFlag</code>时，该page便是meta page类型，此时<code>page.ptr</code>指向一个<code>meta</code>对象，<code>meta</code>类型如下：</p><div class=highlight><pre style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-golang data-lang=golang><span style=color:#8be9fd;font-style:italic>type</span> meta <span style=color:#8be9fd;font-style:italic>struct</span> {
+	magic    <span style=color:#8be9fd>uint32</span>
+	version  <span style=color:#8be9fd>uint32</span>
+	pageSize <span style=color:#8be9fd>uint32</span>
+	flags    <span style=color:#8be9fd>uint32</span>
+	root     bucket
+	freelist pgid
+	pgid     pgid
+	txid     txid
+	checksum <span style=color:#8be9fd>uint64</span>
+}
+</code></pre></div><p>其中的数据成员：</p><ul><li>magic: 魔数，值为0xED0CDAED</li><li>version: 数据格式版本，值为2</li><li>pageSize: 系统分页大小，记录在meta page中方便下次加载db文件</li><li>freelist: freelist page id。freelist page稍后将会提到</li><li>root: 根bucket。boltdb中所有的B+树都通过Bucket结构组织起来。</li><li>pgid: 当前已分配的最大page id。</li><li>txid: 本meta所关联的tx id。</li><li>checksum: meta的数据校验和</li></ul><p><code>meta</code>的反序列化：函数<code>page.meta</code>可从<code>page</code>对象中抽取出<code>meta</code>对象</p><div class=highlight><pre style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-golang data-lang=golang><span style=color:#6272a4>// meta returns a pointer to the metadata section of the page.
+</span><span style=color:#6272a4></span><span style=color:#8be9fd;font-style:italic>func</span> (p <span style=color:#ff79c6>*</span>page) <span style=color:#50fa7b>meta</span>() <span style=color:#ff79c6>*</span>meta {
+	<span style=color:#ff79c6>return</span> (<span style=color:#ff79c6>*</span>meta)(unsafe.<span style=color:#50fa7b>Pointer</span>(<span style=color:#ff79c6>&amp;</span>p.ptr))
+}
+</code></pre></div><p><code>meta</code>的序列化：函数<code>meta.write</code>将<code>meta</code>对象填充到<code>page</code>对象中</p><div class=highlight><pre style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-golang data-lang=golang><span style=color:#6272a4>// meta returns a pointer to the metadata section of the page.
+</span><span style=color:#6272a4></span><span style=color:#8be9fd;font-style:italic>func</span> (p <span style=color:#ff79c6>*</span>page) <span style=color:#50fa7b>meta</span>() <span style=color:#ff79c6>*</span>meta {
+	<span style=color:#ff79c6>return</span> (<span style=color:#ff79c6>*</span>meta)(unsafe.<span style=color:#50fa7b>Pointer</span>(<span style=color:#ff79c6>&amp;</span>p.ptr))
+}
+</code></pre></div><h3 id=freelist-page>freelist page</h3><p>todo freelist page的layout</p><p>freelist page记录了db文件中有哪些是空闲的page, 有哪些是被正在执行中的事务释放的page。在内存中用<code>freelist</code>表示</p><div class=highlight><pre style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-golang data-lang=golang><span style=color:#6272a4>// freelist represents a list of all pages that are available for allocation.
+</span><span style=color:#6272a4></span><span style=color:#6272a4>// It also tracks pages that have been freed but are still in use by open transactions.
+</span><span style=color:#6272a4></span><span style=color:#8be9fd;font-style:italic>type</span> freelist <span style=color:#8be9fd;font-style:italic>struct</span> {
+	ids     []pgid          <span style=color:#6272a4>// all free and available free page ids.
+</span><span style=color:#6272a4></span>	pending <span style=color:#8be9fd;font-style:italic>map</span>[txid][]pgid <span style=color:#6272a4>// mapping of soon-to-be free page ids by tx.
+</span><span style=color:#6272a4></span>	cache   <span style=color:#8be9fd;font-style:italic>map</span>[pgid]<span style=color:#8be9fd>bool</span>   <span style=color:#6272a4>// fast lookup of all free and pending page ids.
+</span><span style=color:#6272a4></span>}
+</code></pre></div><p>其中的数据成员：</p><ul><li>ids: 空闲的page id，可用于分配page。</li><li>pending: 被正在执行中的事务释放的page, 根据事务id分组</li><li>cache: 存储<code>ids</code>和<code>pending</code>中的page id, 用于加快索引速度</li></ul><p><code>freelist</code>的序列化：调用<code>freelist.read</code>从<code>page</code>对象生成<code>freelist</code>对象</p><div class=highlight><pre style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-golang data-lang=golang><span style=color:#6272a4>// read initializes the freelist from a freelist page.
+</span><span style=color:#6272a4></span><span style=color:#8be9fd;font-style:italic>func</span> (f <span style=color:#ff79c6>*</span>freelist) <span style=color:#50fa7b>read</span>(p <span style=color:#ff79c6>*</span>page) {
+	<span style=color:#6272a4>// If the page.count is at the max uint16 value (64k) then it&#39;s considered
+</span><span style=color:#6272a4></span>	<span style=color:#6272a4>// an overflow and the size of the freelist is stored as the first element.
+</span><span style=color:#6272a4></span>	idx, count <span style=color:#ff79c6>:=</span> <span style=color:#bd93f9>0</span>, <span style=color:#8be9fd;font-style:italic>int</span>(p.count)
+	<span style=color:#ff79c6>if</span> count <span style=color:#ff79c6>==</span> <span style=color:#bd93f9>0xFFFF</span> {
+		idx = <span style=color:#bd93f9>1</span>
+		count = <span style=color:#8be9fd;font-style:italic>int</span>(((<span style=color:#ff79c6>*</span>[maxAllocSize]pgid)(unsafe.<span style=color:#50fa7b>Pointer</span>(<span style=color:#ff79c6>&amp;</span>p.ptr)))[<span style=color:#bd93f9>0</span>])
+	}
+
+	<span style=color:#6272a4>// Copy the list of page ids from the freelist.
+</span><span style=color:#6272a4></span>	<span style=color:#ff79c6>if</span> count <span style=color:#ff79c6>==</span> <span style=color:#bd93f9>0</span> {
+		f.ids = <span style=color:#ff79c6>nil</span>
+	} <span style=color:#ff79c6>else</span> {
+		ids <span style=color:#ff79c6>:=</span> ((<span style=color:#ff79c6>*</span>[maxAllocSize]pgid)(unsafe.<span style=color:#50fa7b>Pointer</span>(<span style=color:#ff79c6>&amp;</span>p.ptr)))[idx:count]
+		f.ids = <span style=color:#8be9fd;font-style:italic>make</span>([]pgid, <span style=color:#8be9fd;font-style:italic>len</span>(ids))
+		<span style=color:#8be9fd;font-style:italic>copy</span>(f.ids, ids)
+
+		<span style=color:#6272a4>// Make sure they&#39;re sorted.
+</span><span style=color:#6272a4></span>		sort.<span style=color:#50fa7b>Sort</span>(<span style=color:#50fa7b>pgids</span>(f.ids))
+	}
+
+	<span style=color:#6272a4>// Rebuild the page cache.
+</span><span style=color:#6272a4></span>	f.<span style=color:#50fa7b>reindex</span>()
+}
+</code></pre></div><p>首先将<code>page.ptr</code>强转成一个指向数组<code>[maxAllocSize]pgid</code>的指针，从中读取前<code>count</code>个page id复制到freelist的ids中，并对其排序。最后重建freelist的cache。</p><p><code>freelist</code>的反序列化：调用<code>freelist.write</code>从<code>freelist</code>对象生成page</p><div class=highlight><pre style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-golang data-lang=golang><span style=color:#6272a4>// write writes the page ids onto a freelist page. All free and pending ids are
+</span><span style=color:#6272a4></span><span style=color:#6272a4>// saved to disk since in the event of a program crash, all pending ids will
+</span><span style=color:#6272a4></span><span style=color:#6272a4>// become free.
+</span><span style=color:#6272a4></span><span style=color:#8be9fd;font-style:italic>func</span> (f <span style=color:#ff79c6>*</span>freelist) <span style=color:#50fa7b>write</span>(p <span style=color:#ff79c6>*</span>page) <span style=color:#8be9fd>error</span> {
+	<span style=color:#6272a4>// Combine the old free pgids and pgids waiting on an open transaction.
+</span><span style=color:#6272a4></span>
+	<span style=color:#6272a4>// Update the header flag.
+</span><span style=color:#6272a4></span>	p.flags <span style=color:#ff79c6>|=</span> freelistPageFlag
+
+	<span style=color:#6272a4>// The page.count can only hold up to 64k elements so if we overflow that
+</span><span style=color:#6272a4></span>	<span style=color:#6272a4>// number then we handle it by putting the size in the first element.
+</span><span style=color:#6272a4></span>	lenids <span style=color:#ff79c6>:=</span> f.<span style=color:#50fa7b>count</span>()
+	<span style=color:#ff79c6>if</span> lenids <span style=color:#ff79c6>==</span> <span style=color:#bd93f9>0</span> {
+		p.count = <span style=color:#8be9fd;font-style:italic>uint16</span>(lenids)
+	} <span style=color:#ff79c6>else</span> <span style=color:#ff79c6>if</span> lenids &lt; <span style=color:#bd93f9>0xFFFF</span> {
+		p.count = <span style=color:#8be9fd;font-style:italic>uint16</span>(lenids)
+		f.<span style=color:#50fa7b>copyall</span>(((<span style=color:#ff79c6>*</span>[maxAllocSize]pgid)(unsafe.<span style=color:#50fa7b>Pointer</span>(<span style=color:#ff79c6>&amp;</span>p.ptr)))[:])
+	} <span style=color:#ff79c6>else</span> {
+		p.count = <span style=color:#bd93f9>0xFFFF</span>
+		((<span style=color:#ff79c6>*</span>[maxAllocSize]pgid)(unsafe.<span style=color:#50fa7b>Pointer</span>(<span style=color:#ff79c6>&amp;</span>p.ptr)))[<span style=color:#bd93f9>0</span>] = <span style=color:#50fa7b>pgid</span>(lenids)
+		f.<span style=color:#50fa7b>copyall</span>(((<span style=color:#ff79c6>*</span>[maxAllocSize]pgid)(unsafe.<span style=color:#50fa7b>Pointer</span>(<span style=color:#ff79c6>&amp;</span>p.ptr)))[<span style=color:#bd93f9>1</span>:])
+	}
+
+	<span style=color:#ff79c6>return</span> <span style=color:#ff79c6>nil</span>
+}
+</code></pre></div><p>如上，首先设置page中的flags为<code>freelistPageFlag</code>, 然后将<code>freelist</code>中的ids复制到<code>page.ptr</code>所指向的缓冲区中。</p><p>todo 补充以下说明
+allocate: 分配n个id连续的page。如果分配成功，则将被分配的id从ids和cache中删除
+free: 在事务提交之前，其释放的pages记录到freelist中的pending中, 并更新缓存cache
+release：在事务提交时，将该事务和更老事务的pending pages移动到freelist的ids中。
+rollback: 在事务回滚时，将其pending pages从freelist的pending和cache中删除
+freed: 判断某个page是否free</p><p>todo freelist如何处理溢出
+当freelist中
+<code>freelist</code>的溢出机制：</p><ul><li>当freelist没有溢出时，page.count中记录的就是freelist中free page的数量</li><li>当freelist溢出时，page.count = 0xFFFF, 而free page数量记录在page.ptr中，表达式：count = int(((*[maxAllocSize]pgid)(unsafe.Pointer(&p.ptr)))[0])。此时page布局为，page1包含header和body, page2只有body</li></ul><h3 id=branch-page>branch page</h3><p>todo branch page的layout
+todo branchPageElement的layout</p><p>boltdb中用B+树表示数据，其中branch page用于表示B+树的非叶子节点。branch page的数据中只包含key。</p><div class=highlight><pre style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-golang data-lang=golang><span style=color:#8be9fd;font-style:italic>type</span> branchPageElement <span style=color:#8be9fd;font-style:italic>struct</span> {
+	pos   <span style=color:#8be9fd>uint32</span>
+	ksize <span style=color:#8be9fd>uint32</span>
+	pgid  pgid
+}
+</code></pre></div><p>其中：</p><ul><li>pos: key相对于本<code>branchPageElement</code>对象在内存中的偏移量</li><li>ksize: key的长度</li><li>pgid: 该条<code>branchPageElement</code>数据所指向的children page id.</li></ul><p>从branch page中获取<code>branchPageElement</code>数组。数组的数据存储于<code>page.ptr</code>所指向的缓冲区中</p><div class=highlight><pre style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-golang data-lang=golang><span style=color:#6272a4>// branchPageElements retrieves a list of branch nodes.
+</span><span style=color:#6272a4></span><span style=color:#8be9fd;font-style:italic>func</span> (p <span style=color:#ff79c6>*</span>page) <span style=color:#50fa7b>branchPageElements</span>() []branchPageElement {
+	<span style=color:#ff79c6>if</span> p.count <span style=color:#ff79c6>==</span> <span style=color:#bd93f9>0</span> {
+		<span style=color:#ff79c6>return</span> <span style=color:#ff79c6>nil</span>
+	}
+	<span style=color:#ff79c6>return</span> ((<span style=color:#ff79c6>*</span>[<span style=color:#bd93f9>0x7FFFFFF</span>]branchPageElement)(unsafe.<span style=color:#50fa7b>Pointer</span>(<span style=color:#ff79c6>&amp;</span>p.ptr)))[:]
+}
+</code></pre></div><p>从branch page中获取第<code>index</code>个<code>branchPageElement</code>对象。</p><div class=highlight><pre style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-golang data-lang=golang><span style=color:#6272a4>// branchPageElement retrieves the branch node by index
+</span><span style=color:#6272a4></span><span style=color:#8be9fd;font-style:italic>func</span> (p <span style=color:#ff79c6>*</span>page) <span style=color:#50fa7b>branchPageElement</span>(index <span style=color:#8be9fd>uint16</span>) <span style=color:#ff79c6>*</span>branchPageElement {
+	<span style=color:#ff79c6>return</span> <span style=color:#ff79c6>&amp;</span>((<span style=color:#ff79c6>*</span>[<span style=color:#bd93f9>0x7FFFFFF</span>]branchPageElement)(unsafe.<span style=color:#50fa7b>Pointer</span>(<span style=color:#ff79c6>&amp;</span>p.ptr)))[index]
+}
+</code></pre></div><p>从<code>branchPageElement</code>中获取key值</p><div class=highlight><pre style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-golang data-lang=golang><span style=color:#6272a4>// key returns a byte slice of the node key.
+</span><span style=color:#6272a4></span><span style=color:#8be9fd;font-style:italic>func</span> (n <span style=color:#ff79c6>*</span>branchPageElement) <span style=color:#50fa7b>key</span>() []<span style=color:#8be9fd>byte</span> {
+	buf <span style=color:#ff79c6>:=</span> (<span style=color:#ff79c6>*</span>[maxAllocSize]<span style=color:#8be9fd>byte</span>)(unsafe.<span style=color:#50fa7b>Pointer</span>(n))
+	<span style=color:#ff79c6>return</span> (<span style=color:#ff79c6>*</span>[maxAllocSize]<span style=color:#8be9fd>byte</span>)(unsafe.<span style=color:#50fa7b>Pointer</span>(<span style=color:#ff79c6>&amp;</span>buf[n.pos]))[:n.ksize]
+}
+</code></pre></div><h3 id=leaf-page>leaf page</h3><p>todo leaf page的layout
+todo leafpageelement的layout</p><p>boltdb中用B+树表示数据，leaf page即B+树的叶子节点，其中既包含key又包含value。每对key/value数据使用<code>leafPageElement</code>表示：</p><div class=highlight><pre style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-golang data-lang=golang><span style=color:#8be9fd;font-style:italic>type</span> leafPageElement <span style=color:#8be9fd;font-style:italic>struct</span> {
+	flags <span style=color:#8be9fd>uint32</span>
+	pos   <span style=color:#8be9fd>uint32</span>
+	ksize <span style=color:#8be9fd>uint32</span>
+	vsize <span style=color:#8be9fd>uint32</span>
+}
+</code></pre></div><p>其中</p><ul><li>flags: 用于判断该条kv数据是否为bucket(当flags != 0时)还是普通数据。</li><li>pos: key/value相对于<code>leafPageElement</code>的偏移量</li><li>ksize: key的长度。</li><li>vsize: value的长度。</li></ul><p><code>leafPageElements</code>从leaf类型的page中获取数组<code>[]leafPageElement</code>，从中可看到该数组位于<code>page.ptr</code>指向的缓冲区</p><div class=highlight><pre style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-golang data-lang=golang><span style=color:#6272a4>// leafPageElements retrieves a list of leaf nodes.
+</span><span style=color:#6272a4></span><span style=color:#8be9fd;font-style:italic>func</span> (p <span style=color:#ff79c6>*</span>page) <span style=color:#50fa7b>leafPageElements</span>() []leafPageElement {
+	<span style=color:#ff79c6>if</span> p.count <span style=color:#ff79c6>==</span> <span style=color:#bd93f9>0</span> {
+		<span style=color:#ff79c6>return</span> <span style=color:#ff79c6>nil</span>
+	}
+	<span style=color:#ff79c6>return</span> ((<span style=color:#ff79c6>*</span>[<span style=color:#bd93f9>0x7FFFFFF</span>]leafPageElement)(unsafe.<span style=color:#50fa7b>Pointer</span>(<span style=color:#ff79c6>&amp;</span>p.ptr)))[:]
+}
+</code></pre></div><p><code>leafPageElement</code>从leaf类型的page中获取第index个<code>leafPageElement</code>对象。</p><div class=highlight><pre style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-golang data-lang=golang><span style=color:#6272a4>// leafPageElement retrieves the leaf node by index
+</span><span style=color:#6272a4></span><span style=color:#8be9fd;font-style:italic>func</span> (p <span style=color:#ff79c6>*</span>page) <span style=color:#50fa7b>leafPageElement</span>(index <span style=color:#8be9fd>uint16</span>) <span style=color:#ff79c6>*</span>leafPageElement {
+	n <span style=color:#ff79c6>:=</span> <span style=color:#ff79c6>&amp;</span>((<span style=color:#ff79c6>*</span>[<span style=color:#bd93f9>0x7FFFFFF</span>]leafPageElement)(unsafe.<span style=color:#50fa7b>Pointer</span>(<span style=color:#ff79c6>&amp;</span>p.ptr)))[index]
+	<span style=color:#ff79c6>return</span> n
+}
+</code></pre></div><p><code>key</code>返回<code>leafPageElement</code>中的key值。</p><div class=highlight><pre style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-golang data-lang=golang><span style=color:#6272a4>// key returns a byte slice of the node key.
+</span><span style=color:#6272a4></span><span style=color:#8be9fd;font-style:italic>func</span> (n <span style=color:#ff79c6>*</span>leafPageElement) <span style=color:#50fa7b>key</span>() []<span style=color:#8be9fd>byte</span> {
+	buf <span style=color:#ff79c6>:=</span> (<span style=color:#ff79c6>*</span>[maxAllocSize]<span style=color:#8be9fd>byte</span>)(unsafe.<span style=color:#50fa7b>Pointer</span>(n))
+	<span style=color:#ff79c6>return</span> (<span style=color:#ff79c6>*</span>[maxAllocSize]<span style=color:#8be9fd>byte</span>)(unsafe.<span style=color:#50fa7b>Pointer</span>(<span style=color:#ff79c6>&amp;</span>buf[n.pos]))[:n.ksize:n.ksize]
+}
+</code></pre></div><p><code>value</code>返回<code>leafPageElement</code>中的value值</p><div class=highlight><pre style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-golang data-lang=golang><span style=color:#6272a4>// value returns a byte slice of the node value.
+</span><span style=color:#6272a4></span><span style=color:#8be9fd;font-style:italic>func</span> (n <span style=color:#ff79c6>*</span>leafPageElement) <span style=color:#50fa7b>value</span>() []<span style=color:#8be9fd>byte</span> {
+	buf <span style=color:#ff79c6>:=</span> (<span style=color:#ff79c6>*</span>[maxAllocSize]<span style=color:#8be9fd>byte</span>)(unsafe.<span style=color:#50fa7b>Pointer</span>(n))
+	<span style=color:#ff79c6>return</span> (<span style=color:#ff79c6>*</span>[maxAllocSize]<span style=color:#8be9fd>byte</span>)(unsafe.<span style=color:#50fa7b>Pointer</span>(<span style=color:#ff79c6>&amp;</span>buf[n.pos<span style=color:#ff79c6>+</span>n.ksize]))[:n.vsize:n.vsize]
+}
+</code></pre></div><blockquote><p><strong>推荐阅读</strong></p></blockquote><blockquote><p>更多精彩内容，请扫码关注微信公众号：<strong>后端技术小屋</strong>。如果觉得文章对你有帮助的话，请多多分享、转发、在看。<br><img src=https://backendhouse.github.io/images/qrcode.png alt=二维码></p></blockquote></div></article></div><div id=comments-gitment></div><link rel=stylesheet href=https://cdn.jsdelivr.net/gh/theme-next/theme-next-gitment@1/default.min.css crossorigin=anonymous><script src=https://cdn.jsdelivr.net/gh/theme-next/theme-next-gitment@1/gitment.browser.min.js crossorigin=anonymous></script><script type=text/javascript>var gitment=new Gitment({id:'2021-03-20 09:24:05 \x2b0800 \x2b0800',title:'Boltdb学习笔记之〇--存储管理',link:decodeURI(location.href),desc:'更多精彩内容，请关注微信公众号：后端技术小屋 磁盘和内存的管理 磁盘是持久化存储，内存是非持久化存储。当数据库执行查询时，会以page为单位的读',owner:'BackendHouse',repo:'BackendHouse\/blog_sources',oauth:{client_id:'a75baa5941ec8d9293bd',client_secret:'f63c9c3e360760ee9200e364ac839d0007cb0af7'}});gitment.render('comments-gitment');</script><noscript>Please enable JavaScript to view the <a href=https://github.com/imsun/gitment>comments powered by gitment.</a></noscript></div></main><footer id=footer class=footer><div class=social-links><a href=http://github.com/%e5%90%8e%e7%ab%af%e4%be%a0 class="iconfont icon-github" title=github></a><a href=https://backendhouse.github.io/index.xml type=application/rss+xml class="iconfont icon-rss" title=rss></a></div><div class=copyright><span class=power-by>由 <a class=hexo-link href=https://gohugo.io>Hugo</a> 强力驱动</span>
+<span class=division>|</span>
+<span class=theme-info>主题 -
+<a class=theme-link href=https://github.com/olOwOlo/hugo-theme-even>Even</a></span>
+<span class=copyright-year>&copy;
+2017 -
+2021<span class=heart><i class="iconfont icon-heart"></i></span><span>后端侠</span></span></div></footer><div class=back-to-top id=back-to-top><i class="iconfont icon-up"></i></div></div><script src="/lib/highlight/highlight.pack.js?v=20171001"></script><script src=https://cdn.jsdelivr.net/npm/jquery@3.2.1/dist/jquery.min.js integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin=anonymous></script><script src=https://cdn.jsdelivr.net/npm/slideout@1.0.1/dist/slideout.min.js integrity="sha256-t+zJ/g8/KXIJMjSVQdnibt4dlaDxc9zXr/9oNPeWqdg=" crossorigin=anonymous></script><script src=https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.js integrity="sha256-XVLffZaxoWfGUEbdzuLi7pwaUJv1cecsQJQqGLe7axY=" crossorigin=anonymous></script><script type=text/javascript src=/js/main.min.c12618f9a600c40bd024996677e951e64d3487006775aeb22e200c990006c5c7.js></script></body></html>

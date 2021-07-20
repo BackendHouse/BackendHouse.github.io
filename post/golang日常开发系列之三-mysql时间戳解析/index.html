@@ -1,0 +1,267 @@
+<!doctype html><html lang=zh-cn><head><meta charset=utf-8><meta http-equiv=x-ua-compatible content="IE=edge,chrome=1"><title>golang日常开发系列之三--mysql时间戳解析 - 后端技术小屋</title><meta name=renderer content="webkit"><meta name=viewport content="width=device-width,initial-scale=1,maximum-scale=1"><meta http-equiv=cache-control content="no-transform"><meta http-equiv=cache-control content="no-siteapp"><meta name=theme-color content="#f8f5ec"><meta name=msapplication-navbutton-color content="#f8f5ec"><meta name=apple-mobile-web-app-capable content="yes"><meta name=apple-mobile-web-app-status-bar-style content="#f8f5ec"><meta name=author content="后端侠"><meta name=description content="golang日常开发系列之三--mysql时间戳解析"><meta name=keywords content="Hugo,theme,后端侠"><meta name=generator content="Hugo 0.62.2 with theme even"><link rel=canonical href=https://backendhouse.github.io/post/golang%E6%97%A5%E5%B8%B8%E5%BC%80%E5%8F%91%E7%B3%BB%E5%88%97%E4%B9%8B%E4%B8%89-mysql%E6%97%B6%E9%97%B4%E6%88%B3%E8%A7%A3%E6%9E%90/><link rel=apple-touch-icon sizes=180x180 href=/apple-touch-icon.png><link rel=icon type=image/png sizes=32x32 href=/favicon-32x32.png><link rel=icon type=image/png sizes=16x16 href=/favicon-16x16.png><link rel=manifest href=/manifest.json><link rel=mask-icon href=/safari-pinned-tab.svg color=#5bbad5><link href=/sass/main.min.a2095472a2a8d7ddda1334cf60051cbe40ed55f2467554bb6aa4c17c9bcd27a4.css rel=stylesheet><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.css integrity="sha256-7TyXnr2YU040zfSP+rEcz29ggW4j56/ujTPwjMzyqFY=" crossorigin=anonymous><meta property="og:title" content="golang日常开发系列之三--mysql时间戳解析"><meta property="og:description" content="golang日常开发系列之三--mysql时间戳解析"><meta property="og:type" content="article"><meta property="og:url" content="https://backendhouse.github.io/post/golang%E6%97%A5%E5%B8%B8%E5%BC%80%E5%8F%91%E7%B3%BB%E5%88%97%E4%B9%8B%E4%B8%89-mysql%E6%97%B6%E9%97%B4%E6%88%B3%E8%A7%A3%E6%9E%90/"><meta property="article:published_time" content="2021-07-10T16:54:13+08:00"><meta property="article:modified_time" content="2021-07-10T16:54:13+08:00"><meta itemprop=name content="golang日常开发系列之三--mysql时间戳解析"><meta itemprop=description content="golang日常开发系列之三--mysql时间戳解析"><meta itemprop=datePublished content="2021-07-10T16:54:13+08:00"><meta itemprop=dateModified content="2021-07-10T16:54:13+08:00"><meta itemprop=wordCount content="3380"><meta itemprop=keywords content="GO,"><meta name=twitter:card content="summary"><meta name=twitter:title content="golang日常开发系列之三--mysql时间戳解析"><meta name=twitter:description content="golang日常开发系列之三--mysql时间戳解析"><!--[if lte IE 9]><script src=https://cdnjs.cloudflare.com/ajax/libs/classlist/1.1.20170427/classList.min.js></script><![endif]--><!--[if lt IE 9]><script src=https://cdn.jsdelivr.net/npm/html5shiv@3.7.3/dist/html5shiv.min.js></script><script src=https://cdn.jsdelivr.net/npm/respond.js@1.4.2/dest/respond.min.js></script><![endif]--></head><body><div id=mobile-navbar class=mobile-navbar><div class=mobile-header-logo><a href=/ class=logo>后端技术小屋</a></div><div class=mobile-navbar-icon><span></span><span></span><span></span></div></div><nav id=mobile-menu class="mobile-menu slideout-menu"><ul class=mobile-menu-list><a href=/><li class=mobile-menu-item>Home</li></a><a href=/post/><li class=mobile-menu-item>Archives</li></a><a href=/tags/><li class=mobile-menu-item>Tags</li></a><a href=/categories/><li class=mobile-menu-item>Categories</li></a><a href=/about/><li class=mobile-menu-item>About</li></a></ul></nav><div class=container id=mobile-panel><header id=header class=header><div class=logo-wrapper><a href=/ class=logo>后端技术小屋</a></div><nav class=site-navbar><ul id=menu class=menu><li class=menu-item><a class=menu-item-link href=/>Home</a></li><li class=menu-item><a class=menu-item-link href=/post/>Archives</a></li><li class=menu-item><a class=menu-item-link href=/tags/>Tags</a></li><li class=menu-item><a class=menu-item-link href=/categories/>Categories</a></li><li class=menu-item><a class=menu-item-link href=/about/>About</a></li></ul></nav></header><main id=main class=main><div class=content-wrapper><div id=content class=content><article class=post><header class=post-header><h1 class=post-title>golang日常开发系列之三--mysql时间戳解析</h1><div class=post-meta><span class=post-time>2021-07-10</span><div class=post-category><a href=/categories/go/>GO</a></div></div></header><div class=post-toc id=post-toc><h2 class=post-toc-title>文章目录</h2><div class="post-toc-content always-active"><nav id=TableOfContents><ul><li><a href=#1-时间戳解析>1 时间戳解析</a><ul><li><a href=#11-问题>1.1 问题</a></li><li><a href=#12-解决>1.2 解决</a></li><li><a href=#13-原理>1.3 原理</a><ul><li><a href=#130-三个依赖库的关系>1.3.0 三个依赖库的关系</a></li><li><a href=#131-mysql-driver的注册和使用>1.3.1 mysql driver的注册和使用</a></li><li><a href=#131-mysql-database的打开>1.3.1 mysql database的打开</a></li><li><a href=#132-mysql-database的查询>1.3.2 mysql database的查询</a></li></ul></li></ul></li><li><a href=#2-时区设置>2 时区设置</a><ul><li><a href=#21-问题>2.1 问题</a></li><li><a href=#22-解决>2.2 解决</a></li></ul></li></ul></nav></div></div><div class=post-content><blockquote><p>更多精彩内容，请关注微信公众号：<strong>后端技术小屋</strong></p></blockquote><p>在用golang进行后端开发时，总免不了要和mysql打交道。我们一般使用库github.com/go-sql-driver/mysql作为mysql driver。这篇文章主要阐述初学者在使用mysql driver时容易犯的几个错误及其解决方案</p><h1 id=1-时间戳解析>1 时间戳解析</h1><p>如何将mysql中的timestamp转化为golang中的time.Time结构，这是一个问题&mldr;</p><h2 id=11-问题>1.1 问题</h2><p>首先在mysql上创建表结构并插入数据</p><div class=highlight><pre style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=color:#ff79c6>CREATE</span> <span style=color:#ff79c6>TABLE</span> <span style=color:#ff79c6>`</span>test<span style=color:#ff79c6>`</span> (
+  <span style=color:#ff79c6>`</span>id<span style=color:#ff79c6>`</span> <span style=color:#8be9fd;font-style:italic>int</span>(<span style=color:#bd93f9>10</span>) unsigned <span style=color:#ff79c6>NOT</span> <span style=color:#ff79c6>NULL</span> AUTO_INCREMENT,
+  <span style=color:#ff79c6>`</span>create_time<span style=color:#ff79c6>`</span> <span style=color:#ff79c6>timestamp</span> <span style=color:#ff79c6>NOT</span> <span style=color:#ff79c6>NULL</span> <span style=color:#ff79c6>DEFAULT</span> <span style=color:#ff79c6>CURRENT_TIMESTAMP</span>,
+  <span style=color:#ff79c6>PRIMARY</span> <span style=color:#ff79c6>KEY</span> (<span style=color:#ff79c6>`</span>id<span style=color:#ff79c6>`</span>)
+) ENGINE<span style=color:#ff79c6>=</span>InnoDB AUTO_INCREMENT<span style=color:#ff79c6>=</span><span style=color:#bd93f9>136</span> <span style=color:#ff79c6>DEFAULT</span> CHARSET<span style=color:#ff79c6>=</span>utf8mb4 <span style=color:#ff79c6>COLLATE</span><span style=color:#ff79c6>=</span>utf8mb4_unicode_ci; 
+<span style=color:#ff79c6>insert</span> <span style=color:#ff79c6>into</span> test (create_time) <span style=color:#ff79c6>values</span> (now()); 
+</code></pre></div><p>golang代码如下</p><div class=highlight><pre style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-golang data-lang=golang><span style=color:#ff79c6>package</span> main
+
+<span style=color:#ff79c6>import</span> (
+	<span style=color:#f1fa8c>&#34;log&#34;</span>
+	<span style=color:#f1fa8c>&#34;net&#34;</span>
+	<span style=color:#f1fa8c>&#34;strings&#34;</span>
+	<span style=color:#f1fa8c>&#34;time&#34;</span>
+
+	<span style=color:#f1fa8c>&#34;github.com/go-sql-driver/mysql&#34;</span>
+	<span style=color:#f1fa8c>&#34;github.com/jmoiron/sqlx&#34;</span>
+	<span style=color:#f1fa8c>&#34;github.com/jmoiron/sqlx/reflectx&#34;</span>
+	<span style=color:#f1fa8c>&#34;github.com/k0kubun/pp&#34;</span>
+)
+
+<span style=color:#8be9fd;font-style:italic>type</span> TestData <span style=color:#8be9fd;font-style:italic>struct</span> {
+	Id         <span style=color:#8be9fd>int</span>       <span style=color:#f1fa8c>`</span><span style=color:#f1fa8c>json:&#34;id&#34;</span><span style=color:#f1fa8c>`</span>
+	CreateTime time.Time <span style=color:#f1fa8c>`</span><span style=color:#f1fa8c>json:&#34;create_time&#34;</span><span style=color:#f1fa8c>`</span>
+}
+
+<span style=color:#8be9fd;font-style:italic>func</span> <span style=color:#50fa7b>main</span>() {
+	c <span style=color:#ff79c6>:=</span> mysql.<span style=color:#50fa7b>NewConfig</span>()
+	c.DBName = <span style=color:#f1fa8c>&#34;test&#34;</span>
+	c.Net = <span style=color:#f1fa8c>&#34;tcp&#34;</span>
+	c.User = <span style=color:#f1fa8c>&#34;user&#34;</span>
+	c.Passwd = <span style=color:#f1fa8c>&#34;password&#34;</span>
+	c.Addr = net.<span style=color:#50fa7b>JoinHostPort</span>(<span style=color:#f1fa8c>&#34;localhost&#34;</span>, <span style=color:#f1fa8c>&#34;3306&#34;</span>)
+	c.Params = <span style=color:#8be9fd;font-style:italic>map</span>[<span style=color:#8be9fd>string</span>]<span style=color:#8be9fd>string</span>{}
+
+	db, err <span style=color:#ff79c6>:=</span> sqlx.<span style=color:#50fa7b>Open</span>(<span style=color:#f1fa8c>&#34;mysql&#34;</span>, c.<span style=color:#50fa7b>FormatDSN</span>())
+	<span style=color:#ff79c6>if</span> err <span style=color:#ff79c6>!=</span> <span style=color:#ff79c6>nil</span> {
+		log.<span style=color:#50fa7b>Fatal</span>(err)
+	}
+	db.Mapper = reflectx.<span style=color:#50fa7b>NewMapperFunc</span>(<span style=color:#f1fa8c>&#34;json&#34;</span>, strings.ToLower)
+
+	res <span style=color:#ff79c6>:=</span> []TestData{}
+	err = db.<span style=color:#50fa7b>Select</span>(<span style=color:#ff79c6>&amp;</span>res, <span style=color:#f1fa8c>&#34;select id, create_time from test.test&#34;</span>)
+	<span style=color:#ff79c6>if</span> err <span style=color:#ff79c6>!=</span> <span style=color:#ff79c6>nil</span> {
+		log.<span style=color:#50fa7b>Fatal</span>(err)
+	}
+	pp.<span style=color:#50fa7b>Println</span>(res)
+}
+</code></pre></div><p>运行结果</p><pre><code>$ go run main.go               
+2021/07/19 18:00:00 sql: Scan error on column index 1, name &quot;create_time&quot;: unsupported Scan, storing driver.Value type []uint8 into type *time.Time
+exit status 1 
+</code></pre><h2 id=12-解决>1.2 解决</h2><p>在Config.Params中加入"parseTime"开关</p><div class=highlight><pre style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-golang data-lang=golang>c.Params = <span style=color:#8be9fd;font-style:italic>map</span>[<span style=color:#8be9fd>string</span>]<span style=color:#8be9fd>string</span>{}
+</code></pre></div><p>变成</p><div class=highlight><pre style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-golang data-lang=golang>c.Params = <span style=color:#8be9fd;font-style:italic>map</span>[<span style=color:#8be9fd>string</span>]<span style=color:#8be9fd>string</span>{
+		<span style=color:#f1fa8c>&#34;parseTime&#34;</span>: <span style=color:#f1fa8c>&#34;true&#34;</span>,
+}
+</code></pre></div><p>再次运行，我们就可以读到mysql中的值了</p><pre><code>[]main.TestData{
+  main.TestData{
+    Id:         136,
+    CreateTime: 2021-07-19 17:52:08 UTC,
+  },
+}
+</code></pre><h2 id=13-原理>1.3 原理</h2><p>为什么增加一个"parseTime"开关就好使了呢？我们分析下mysql driver库的代码</p><h3 id=130-三个依赖库的关系>1.3.0 三个依赖库的关系</h3><p>从代码中可可知，我们的代码依赖三个库，这三个库都与mysql相关。</p><pre><code>database/sql
+
+github.com/jmoiron/sqlx
+github.com/go-sql-driver/mysql
+</code></pre><p>其中database/sql是golang内置库，它约定了一系列访问支持SQL的数据库的接口，其中并不包含实现。</p><p>github.com/go-sql-driver/mysql是mysql driver, 它实现了database/sql库中的一系列接口。因此只需要将mysql driver中的实现注册到database/sql中，即可通过database/sql中的接口访问clickhouse.</p><p>github.com/jmoiron/sqlx是对database/sql中一系列接口的封装和扩展，使得用户更方便使用.</p><h3 id=131-mysql-driver的注册和使用>1.3.1 mysql driver的注册和使用</h3><p>在mysql driver的初始化函数中，将<code>MySQLDriver</code>注册到了database/sql中</p><div class=highlight><pre style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-golang data-lang=golang><span style=color:#8be9fd;font-style:italic>func</span> <span style=color:#50fa7b>init</span>() {
+	sql.<span style=color:#50fa7b>Register</span>(<span style=color:#f1fa8c>&#34;mysql&#34;</span>, <span style=color:#ff79c6>&amp;</span>MySQLDriver{})
+}
+</code></pre></div><h4 id=1311-如何注册mysql-driver>1.3.1.1 如何注册mysql driver</h4><p>sql.Register的实现如下，这里将key=mysql, value=MySQLDriver加入到了sql.drivers中</p><div class=highlight><pre style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-golang data-lang=golang><span style=color:#8be9fd;font-style:italic>func</span> <span style=color:#50fa7b>Register</span>(name <span style=color:#8be9fd>string</span>, driver driver.Driver) {
+	driversMu.<span style=color:#50fa7b>Lock</span>()
+	<span style=color:#ff79c6>defer</span> driversMu.<span style=color:#50fa7b>Unlock</span>()
+	<span style=color:#ff79c6>if</span> driver <span style=color:#ff79c6>==</span> <span style=color:#ff79c6>nil</span> {
+		<span style=color:#8be9fd;font-style:italic>panic</span>(<span style=color:#f1fa8c>&#34;sql: Register driver is nil&#34;</span>)
+	}
+	<span style=color:#ff79c6>if</span> _, dup <span style=color:#ff79c6>:=</span> drivers[name]; dup {
+		<span style=color:#8be9fd;font-style:italic>panic</span>(<span style=color:#f1fa8c>&#34;sql: Register called twice for driver &#34;</span> <span style=color:#ff79c6>+</span> name)
+	}
+	drivers[name] = driver
+}
+</code></pre></div><p>而sql.driver的数据结构如下, 即MysqlDriver需要实现Driver中的方法</p><div class=highlight><pre style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-golang data-lang=golang><span style=color:#8be9fd;font-style:italic>var</span> (
+	driversMu sync.RWMutex
+	drivers   = <span style=color:#8be9fd;font-style:italic>make</span>(<span style=color:#8be9fd;font-style:italic>map</span>[<span style=color:#8be9fd>string</span>]driver.Driver)
+)
+
+<span style=color:#8be9fd;font-style:italic>type</span> Driver <span style=color:#8be9fd;font-style:italic>interface</span> {
+	<span style=color:#50fa7b>Open</span>(name <span style=color:#8be9fd>string</span>) (Conn, <span style=color:#8be9fd>error</span>)
+}
+
+<span style=color:#8be9fd;font-style:italic>type</span> Conn <span style=color:#8be9fd;font-style:italic>interface</span> {
+	<span style=color:#50fa7b>Prepare</span>(query <span style=color:#8be9fd>string</span>) (Stmt, <span style=color:#8be9fd>error</span>)
+	<span style=color:#50fa7b>Close</span>() <span style=color:#8be9fd>error</span>
+	<span style=color:#50fa7b>Begin</span>() (Tx, <span style=color:#8be9fd>error</span>)
+}
+</code></pre></div><h4 id=1312-如何使用mysql-driver>1.3.1.2 如何使用mysql driver</h4><p>到此为止，mysql driver已经注册到了database/sql中，那么database/sql如何调用呢？
+下面的代码中，</p><ul><li>首先从sql.drivers中根据driverName(对于mysql driver来说，就是mysql)获取对应的sql.Driver实例，</li><li>然后将该实例转化为sql.driver.DriverContext类型(mysql driver中也实现了sql.driver.DriverContext接口)</li><li>接着调用driverCtx.OpenConnector返回sql.driver.Connector实例(底层类型是mysql.connector, 它实现了sql.driver.Connector实例)</li><li>最后将connector传给OpenDB, 返回sql.DB实例</li></ul><div class=highlight><pre style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-golang data-lang=golang><span style=color:#8be9fd;font-style:italic>func</span> <span style=color:#50fa7b>Open</span>(driverName, dataSourceName <span style=color:#8be9fd>string</span>) (<span style=color:#ff79c6>*</span>DB, <span style=color:#8be9fd>error</span>) {
+	driversMu.<span style=color:#50fa7b>RLock</span>()
+	driveri, ok <span style=color:#ff79c6>:=</span> drivers[driverName]
+	driversMu.<span style=color:#50fa7b>RUnlock</span>()
+	<span style=color:#ff79c6>if</span> !ok {
+		<span style=color:#ff79c6>return</span> <span style=color:#ff79c6>nil</span>, fmt.<span style=color:#50fa7b>Errorf</span>(<span style=color:#f1fa8c>&#34;sql: unknown driver %q (forgotten import?)&#34;</span>, driverName)
+	}
+
+	<span style=color:#ff79c6>if</span> driverCtx, ok <span style=color:#ff79c6>:=</span> driveri.(driver.DriverContext); ok {
+		connector, err <span style=color:#ff79c6>:=</span> driverCtx.<span style=color:#50fa7b>OpenConnector</span>(dataSourceName)
+		<span style=color:#ff79c6>if</span> err <span style=color:#ff79c6>!=</span> <span style=color:#ff79c6>nil</span> {
+			<span style=color:#ff79c6>return</span> <span style=color:#ff79c6>nil</span>, err
+		}
+		<span style=color:#ff79c6>return</span> <span style=color:#50fa7b>OpenDB</span>(connector), <span style=color:#ff79c6>nil</span>
+	}
+	<span style=color:#ff79c6>return</span> <span style=color:#50fa7b>OpenDB</span>(dsnConnector{dsn: dataSourceName, driver: driveri}), <span style=color:#ff79c6>nil</span>
+}
+</code></pre></div><p>其实dsnConnector实现了sql.driver.Connector接口，如何实现以及实现中如何调用mysql driver实例留待读者分析</p><h3 id=131-mysql-database的打开>1.3.1 mysql database的打开</h3><p>在我们的应用代码中，调用了sqlx.Open</p><div class=highlight><pre style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-golang data-lang=golang>	db, err <span style=color:#ff79c6>:=</span> sqlx.<span style=color:#50fa7b>Open</span>(<span style=color:#f1fa8c>&#34;mysql&#34;</span>, c.<span style=color:#50fa7b>FormatDSN</span>())
+</code></pre></div><p>而sqlx.Open中调用了sql.Open, 返回sqlx.DB对象，其中封装了sql.DB对象(来自于database/sql)</p><pre><code>func Open(driverName, dataSourceName string) (*DB, error) {
+	db, err := sql.Open(driverName, dataSourceName)
+	if err != nil {
+		return nil, err
+	}
+	return &amp;DB{DB: db, driverName: driverName, Mapper: mapper()}, err
+}
+</code></pre><p>sql.Open的实现见1.3.1.2</p><h3 id=132-mysql-database的查询>1.3.2 mysql database的查询</h3><p>在应用代码中, 执行对应的sql语句，结果放置于res中</p><div class=highlight><pre style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-golang data-lang=golang>	err = db.<span style=color:#50fa7b>Select</span>(<span style=color:#ff79c6>&amp;</span>res, <span style=color:#f1fa8c>&#34;select id, create_time from test.test&#34;</span>)
+</code></pre></div><p>应用代码调用了sqlx.Select, 实现如下：</p><div class=highlight><pre style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-golang data-lang=golang><span style=color:#8be9fd;font-style:italic>func</span> <span style=color:#50fa7b>Select</span>(q Queryer, dest <span style=color:#8be9fd;font-style:italic>interface</span>{}, query <span style=color:#8be9fd>string</span>, args <span style=color:#ff79c6>...</span><span style=color:#8be9fd;font-style:italic>interface</span>{}) <span style=color:#8be9fd>error</span> {
+	rows, err <span style=color:#ff79c6>:=</span> q.<span style=color:#50fa7b>Queryx</span>(query, args<span style=color:#ff79c6>...</span>)
+	<span style=color:#ff79c6>if</span> err <span style=color:#ff79c6>!=</span> <span style=color:#ff79c6>nil</span> {
+		<span style=color:#ff79c6>return</span> err
+	}
+	<span style=color:#6272a4>// if something happens here, we want to make sure the rows are Closed
+</span><span style=color:#6272a4></span>	<span style=color:#ff79c6>defer</span> rows.<span style=color:#50fa7b>Close</span>()
+	<span style=color:#ff79c6>return</span> <span style=color:#50fa7b>scanAll</span>(rows, dest, <span style=color:#ff79c6>false</span>)
+}
+</code></pre></div><p>因此，查询整体上分为两步</p><ul><li>查询mysql database中，获取rows数据</li><li>将rows数据反序列化到res中</li></ul><h4 id=1321-从mysql-database中获取rows数据>1.3.2.1 从mysql database中获取rows数据</h4><p>在1.3.2 sqlx.Select函数中，q即为从应用传入的db，db类型为sqlx.DB
+因此<code>rows, err := q.Queryx(query, args...)</code>调用了函数sqlx.DB.Queryx</p><div class=highlight><pre style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-golang data-lang=golang><span style=color:#8be9fd;font-style:italic>func</span> (db <span style=color:#ff79c6>*</span>DB) <span style=color:#50fa7b>Queryx</span>(query <span style=color:#8be9fd>string</span>, args <span style=color:#ff79c6>...</span><span style=color:#8be9fd;font-style:italic>interface</span>{}) (<span style=color:#ff79c6>*</span>Rows, <span style=color:#8be9fd>error</span>) {
+	r, err <span style=color:#ff79c6>:=</span> db.DB.<span style=color:#50fa7b>Query</span>(query, args<span style=color:#ff79c6>...</span>)
+	<span style=color:#ff79c6>if</span> err <span style=color:#ff79c6>!=</span> <span style=color:#ff79c6>nil</span> {
+		<span style=color:#ff79c6>return</span> <span style=color:#ff79c6>nil</span>, err
+	}
+	<span style=color:#ff79c6>return</span> <span style=color:#ff79c6>&amp;</span>Rows{Rows: r, unsafe: db.unsafe, Mapper: db.Mapper}, err
+}
+</code></pre></div><p>而sqlx.DB.Queryx之后的调用链如下：</p><div class=highlight><pre style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-golang data-lang=golang>sql.DB.Query
+sql.DB.QueryContext
+sql.DB.query
+sql.DB.queryDC
+sql.ctxDriverQuery
+sql.driver.Queryer.Query
+</code></pre></div><p>sql.driver.Queryer是interface, 底层实际调用的是mysql.mysqlConn.Query -> mysql.mysqlConn.query:</p><ul><li>向mysql database发送查询命令</li><li>读取数据，放置于textRows结构中</li></ul><div class=highlight><pre style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-golang data-lang=golang><span style=color:#8be9fd;font-style:italic>func</span> (mc <span style=color:#ff79c6>*</span>mysqlConn) <span style=color:#50fa7b>query</span>(query <span style=color:#8be9fd>string</span>, args []driver.Value) (<span style=color:#ff79c6>*</span>textRows, <span style=color:#8be9fd>error</span>) {
+	<span style=color:#ff79c6>if</span> mc.closed.<span style=color:#50fa7b>IsSet</span>() {
+		errLog.<span style=color:#50fa7b>Print</span>(ErrInvalidConn)
+		<span style=color:#ff79c6>return</span> <span style=color:#ff79c6>nil</span>, driver.ErrBadConn
+	}
+	<span style=color:#ff79c6>if</span> <span style=color:#8be9fd;font-style:italic>len</span>(args) <span style=color:#ff79c6>!=</span> <span style=color:#bd93f9>0</span> {
+		<span style=color:#ff79c6>if</span> !mc.cfg.InterpolateParams {
+			<span style=color:#ff79c6>return</span> <span style=color:#ff79c6>nil</span>, driver.ErrSkip
+		}
+		<span style=color:#6272a4>// try client-side prepare to reduce roundtrip
+</span><span style=color:#6272a4></span>		prepared, err <span style=color:#ff79c6>:=</span> mc.<span style=color:#50fa7b>interpolateParams</span>(query, args)
+		<span style=color:#ff79c6>if</span> err <span style=color:#ff79c6>!=</span> <span style=color:#ff79c6>nil</span> {
+			<span style=color:#ff79c6>return</span> <span style=color:#ff79c6>nil</span>, err
+		}
+		query = prepared
+	}
+	<span style=color:#6272a4>// Send command
+</span><span style=color:#6272a4></span>	err <span style=color:#ff79c6>:=</span> mc.<span style=color:#50fa7b>writeCommandPacketStr</span>(comQuery, query)
+	<span style=color:#ff79c6>if</span> err <span style=color:#ff79c6>==</span> <span style=color:#ff79c6>nil</span> {
+		<span style=color:#6272a4>// Read Result
+</span><span style=color:#6272a4></span>		<span style=color:#8be9fd;font-style:italic>var</span> resLen <span style=color:#8be9fd>int</span>
+		resLen, err = mc.<span style=color:#50fa7b>readResultSetHeaderPacket</span>()
+		<span style=color:#ff79c6>if</span> err <span style=color:#ff79c6>==</span> <span style=color:#ff79c6>nil</span> {
+			rows <span style=color:#ff79c6>:=</span> <span style=color:#8be9fd;font-style:italic>new</span>(textRows)
+			rows.mc = mc
+
+			<span style=color:#ff79c6>if</span> resLen <span style=color:#ff79c6>==</span> <span style=color:#bd93f9>0</span> {
+				rows.rs.done = <span style=color:#ff79c6>true</span>
+
+				<span style=color:#ff79c6>switch</span> err <span style=color:#ff79c6>:=</span> rows.<span style=color:#50fa7b>NextResultSet</span>(); err {
+				<span style=color:#ff79c6>case</span> <span style=color:#ff79c6>nil</span>, io.EOF:
+					<span style=color:#ff79c6>return</span> rows, <span style=color:#ff79c6>nil</span>
+				<span style=color:#ff79c6>default</span>:
+					<span style=color:#ff79c6>return</span> <span style=color:#ff79c6>nil</span>, err
+				}
+			}
+
+			<span style=color:#6272a4>// Columns
+</span><span style=color:#6272a4></span>			rows.rs.columns, err = mc.<span style=color:#50fa7b>readColumns</span>(resLen)
+			<span style=color:#ff79c6>return</span> rows, err
+		}
+	}
+	<span style=color:#ff79c6>return</span> <span style=color:#ff79c6>nil</span>, mc.<span style=color:#50fa7b>markBadConn</span>(err)
+}
+</code></pre></div><h4 id=1322-将将rows数据反序列化到res中>1.3.2.2 将将rows数据反序列化到res中</h4><p>到此为止，我们已经获得了rows数据, 类型为sqlx.Rows，结构中嵌套者sql.Rows结构</p><div class=highlight><pre style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-golang data-lang=golang><span style=color:#8be9fd;font-style:italic>type</span> Rows <span style=color:#8be9fd;font-style:italic>struct</span> {
+	<span style=color:#ff79c6>*</span>sql.Rows
+	unsafe <span style=color:#8be9fd>bool</span>
+	Mapper <span style=color:#ff79c6>*</span>reflectx.Mapper
+	<span style=color:#6272a4>// these fields cache memory use for a rows during iteration w/ structScan
+</span><span style=color:#6272a4></span>	started <span style=color:#8be9fd>bool</span>
+	fields  [][]<span style=color:#8be9fd>int</span>
+	values  []<span style=color:#8be9fd;font-style:italic>interface</span>{}
+}
+</code></pre></div><p>而sql.Rows结构中嵌套着driver.Rows interface, 在mysql driver中对应的底层结构为textRows</p><p>scanAll实现了将sqlx.Rows反序列化到数组中的逻辑, 其中调用了sqlx.Rows.Next
+接下来的调用链：</p><pre><code>sql.Rows.nextLocked 
+textRows.Next
+textRows.readRow
+</code></pre><h4 id=1323-问题原因>1.3.2.3 问题原因</h4><p>截取mysql.textRows.readRow中部分代码如下
+对于时间戳字段来说，mysql返回的是形同<code>yyyy-mm-dd HH:MM:SS</code>的[]byte</p><p>如果开关parseTime的值缺省，默认值为false, 则直接将[]byte赋值给dest[i]</p><div class=highlight><pre style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-golang data-lang=golang>	<span style=color:#ff79c6>for</span> i <span style=color:#ff79c6>:=</span> <span style=color:#ff79c6>range</span> dest {
+		<span style=color:#6272a4>// Read bytes and convert to string
+</span><span style=color:#6272a4></span>		dest[i], isNull, n, err = <span style=color:#50fa7b>readLengthEncodedString</span>(data[pos:])
+		pos <span style=color:#ff79c6>+=</span> n
+		<span style=color:#ff79c6>if</span> err <span style=color:#ff79c6>==</span> <span style=color:#ff79c6>nil</span> {
+			<span style=color:#ff79c6>if</span> !isNull {
+				<span style=color:#ff79c6>if</span> !mc.parseTime {
+					<span style=color:#ff79c6>continue</span>
+				} <span style=color:#ff79c6>else</span> {
+					<span style=color:#ff79c6>switch</span> rows.rs.columns[i].fieldType {
+					<span style=color:#ff79c6>case</span> fieldTypeTimestamp, fieldTypeDateTime,
+						fieldTypeDate, fieldTypeNewDate:
+						dest[i], err = <span style=color:#50fa7b>parseDateTime</span>(
+							dest[i].([]<span style=color:#8be9fd>byte</span>),
+							mc.cfg.Loc,
+						)
+						<span style=color:#ff79c6>if</span> err <span style=color:#ff79c6>==</span> <span style=color:#ff79c6>nil</span> {
+							<span style=color:#ff79c6>continue</span>
+						}
+					<span style=color:#ff79c6>default</span>:
+						<span style=color:#ff79c6>continue</span>
+					}
+				}
+
+			} <span style=color:#ff79c6>else</span> {
+				dest[i] = <span style=color:#ff79c6>nil</span>
+				<span style=color:#ff79c6>continue</span>
+			}
+		}
+		<span style=color:#ff79c6>return</span> err <span style=color:#6272a4>// err != nil
+</span><span style=color:#6272a4></span>	}
+</code></pre></div><p>后续执行sql.convertAssignRows将[]byte转化为time.Time的时候，会返回错误</p><pre><code>	return fmt.Errorf(&quot;unsupported Scan, storing driver.Value type %T into type %T&quot;, src, dest)
+</code></pre><p>而如果开关parseTime的值设置为true, 则mysql.textRows.readRow中会将[]byte转化为time.Time类型，后续执行sql.convertAssignRows时，才能成功注入time.Time类型的值</p><div class=highlight><pre style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-golang data-lang=golang>	<span style=color:#ff79c6>case</span> time.Time:
+		<span style=color:#ff79c6>switch</span> d <span style=color:#ff79c6>:=</span> dest.(<span style=color:#8be9fd;font-style:italic>type</span>) {
+		<span style=color:#ff79c6>case</span> <span style=color:#ff79c6>*</span>time.Time:
+			<span style=color:#ff79c6>*</span>d = s
+			<span style=color:#ff79c6>return</span> <span style=color:#ff79c6>nil</span>
+</code></pre></div><h1 id=2-时区设置>2 时区设置</h1><h2 id=21-问题>2.1 问题</h2><p>细心的同学可能会发现, 即使加上了parseTime = true的开关，main.go输出的时间戳还是有点问题：时区是UTC，不太对</p><div class=highlight><pre style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-golang data-lang=golang>[]main.TestData{
+  main.TestData{
+    Id:         <span style=color:#bd93f9>136</span>,
+    CreateTime: <span style=color:#bd93f9>2021</span><span style=color:#ff79c6>-</span><span style=color:#bd93f9>07</span><span style=color:#ff79c6>-</span><span style=color:#bd93f9>19</span> <span style=color:#bd93f9>17</span>:<span style=color:#bd93f9>52</span>:<span style=color:#bd93f9>0</span><span style=color:#bd93f9>8</span> UTC,
+  },
+}
+</code></pre></div><h2 id=22-解决>2.2 解决</h2><p>前面我们已经完整的走读了一遍代码。遇到时区问题，我们第一时间想到可能是mysql.textRows.readRow中将[]byte转化为time.Time出了问题</p><div class=highlight><pre style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-golang data-lang=golang>						dest[i], err = <span style=color:#50fa7b>parseDateTime</span>(
+							dest[i].([]<span style=color:#8be9fd>byte</span>),
+							mc.cfg.Loc,
+						)
+</code></pre></div><p>我们看到，执行parseDateTime解析[]byte的时候，会指定一个参数代表时区，而这个参数来自mc.cfg.Loc, 即main.go中的mysql config，因此解决方案很简单，只需在mysql config中加入本地时区信息即可</p><div class=highlight><pre style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-golang data-lang=golang>	c.Loc, _ = time.<span style=color:#50fa7b>LoadLocation</span>(<span style=color:#f1fa8c>&#34;Local&#34;</span>)
+</code></pre></div><p>重新运行main.go即可得到正确的时区</p><pre><code>[]main.TestData{
+  main.TestData{
+    Id:         136,
+    CreateTime: 2021-07-19 17:52:08 Local,
+  },
+}
+</code></pre><blockquote><p><strong>推荐阅读</strong></p></blockquote><ul><li><a href=https://mp.weixin.qq.com/s/aYC_qrvYETkFnMjMY_ufcQ>Boltdb学习笔记之三&ndash;事务与并发控制</a></li><li><a href=https://mp.weixin.qq.com/s/XbohaCZq_k4R2HZv6vRlXA>Boltdb学习笔记之二&ndash;数据结构</a></li><li><a href=https://mp.weixin.qq.com/s/80aFNt3STWk2xkV8qbDRqw>Boltdb学习笔记之一&ndash;存储管理</a></li><li><a href=https://mp.weixin.qq.com/s/PWczv1LuaRE7ItUqZJ9i4g>Boltdb学习笔记之〇&ndash;概述</a></li></ul><blockquote><p>更多精彩内容，请扫码关注微信公众号：<strong>后端技术小屋</strong>。如果觉得文章对你有帮助的话，请多多分享、转发、在看。<br><img src=https://backendhouse.github.io/images/qrcode.png alt=二维码></p></blockquote></div><div class=post-copyright><p class=copyright-item><span class=item-title>文章作者</span>
+<span class=item-content>后端侠</span></p><p class=copyright-item><span class=item-title>上次更新</span>
+<span class=item-content>2021-07-10</span></p></div><footer class=post-footer><div class=post-tags><a href=/tags/go/>GO</a></div><nav class=post-nav><a class=prev href=/post/golang%E6%97%A5%E5%B8%B8%E5%BC%80%E5%8F%91%E7%B3%BB%E5%88%97%E4%B9%8B%E4%B8%80-defer%E7%9A%84%E9%82%A3%E4%BA%9B%E5%9D%91/><i class="iconfont icon-left"></i><span class="prev-text nav-default">golang日常开发系列之一--defer的那些坑</span>
+<span class="prev-text nav-mobile">上一篇</span></a>
+<a class=next href=/post/%E5%A6%82%E4%BD%95%E5%B0%86linux%E5%89%8D%E5%8F%B0%E4%BB%BB%E5%8A%A1%E8%BD%AC%E5%90%8E%E5%8F%B0%E8%BF%90%E8%A1%8C/><span class="next-text nav-default">如何将linux前台任务转后台运行</span>
+<span class="next-text nav-mobile">下一篇</span>
+<i class="iconfont icon-right"></i></a></nav></footer></article></div><div id=comments-gitment></div><link rel=stylesheet href=https://cdn.jsdelivr.net/gh/theme-next/theme-next-gitment@1/default.min.css crossorigin=anonymous><script src=https://cdn.jsdelivr.net/gh/theme-next/theme-next-gitment@1/gitment.browser.min.js crossorigin=anonymous></script><script type=text/javascript>var gitment=new Gitment({id:'2021-07-10 16:54:13 \x2b0800 \x2b0800',title:'golang日常开发系列之三--mysql时间戳解析',link:decodeURI(location.href),desc:'更多精彩内容，请关注微信公众号：后端技术小屋 在用golang进行后端开发时，总免不了要和mysql打交道。我们一般使用库github.com',owner:'BackendHouse',repo:'BackendHouse\/blog_sources',oauth:{client_id:'a75baa5941ec8d9293bd',client_secret:'f63c9c3e360760ee9200e364ac839d0007cb0af7'}});gitment.render('comments-gitment');</script><noscript>Please enable JavaScript to view the <a href=https://github.com/imsun/gitment>comments powered by gitment.</a></noscript></div></main><footer id=footer class=footer><div class=social-links><a href=http://github.com/%e5%90%8e%e7%ab%af%e4%be%a0 class="iconfont icon-github" title=github></a><a href=https://backendhouse.github.io/index.xml type=application/rss+xml class="iconfont icon-rss" title=rss></a></div><div class=copyright><span class=power-by>由 <a class=hexo-link href=https://gohugo.io>Hugo</a> 强力驱动</span>
+<span class=division>|</span>
+<span class=theme-info>主题 -
+<a class=theme-link href=https://github.com/olOwOlo/hugo-theme-even>Even</a></span>
+<span class=copyright-year>&copy;
+2017 -
+2021<span class=heart><i class="iconfont icon-heart"></i></span><span>后端侠</span></span></div></footer><div class=back-to-top id=back-to-top><i class="iconfont icon-up"></i></div></div><script src="/lib/highlight/highlight.pack.js?v=20171001"></script><script src=https://cdn.jsdelivr.net/npm/jquery@3.2.1/dist/jquery.min.js integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin=anonymous></script><script src=https://cdn.jsdelivr.net/npm/slideout@1.0.1/dist/slideout.min.js integrity="sha256-t+zJ/g8/KXIJMjSVQdnibt4dlaDxc9zXr/9oNPeWqdg=" crossorigin=anonymous></script><script src=https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.js integrity="sha256-XVLffZaxoWfGUEbdzuLi7pwaUJv1cecsQJQqGLe7axY=" crossorigin=anonymous></script><script type=text/javascript src=/js/main.min.c12618f9a600c40bd024996677e951e64d3487006775aeb22e200c990006c5c7.js></script></body></html>

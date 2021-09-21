@@ -1,0 +1,109 @@
+<!doctype html><html lang=zh-cn><head><meta charset=utf-8><meta http-equiv=x-ua-compatible content="IE=edge,chrome=1"><title>一个怪异的C++函数定义方式 - 后端技术小屋</title><meta name=renderer content="webkit"><meta name=viewport content="width=device-width,initial-scale=1,maximum-scale=1"><meta http-equiv=cache-control content="no-transform"><meta http-equiv=cache-control content="no-siteapp"><meta name=theme-color content="#f8f5ec"><meta name=msapplication-navbutton-color content="#f8f5ec"><meta name=apple-mobile-web-app-capable content="yes"><meta name=apple-mobile-web-app-status-bar-style content="#f8f5ec"><meta name=author content="后端侠"><meta name=description content="一个怪异的C++函数定义方式"><meta name=keywords content="Hugo,theme,后端侠"><meta name=generator content="Hugo 0.62.2 with theme even"><link rel=canonical href=https://backendhouse.github.io/post/%E4%B8%80%E4%B8%AA%E6%80%AA%E5%BC%82%E7%9A%84c++%E5%87%BD%E6%95%B0%E5%AE%9A%E4%B9%89%E6%96%B9%E5%BC%8F/><link rel=apple-touch-icon sizes=180x180 href=/apple-touch-icon.png><link rel=icon type=image/png sizes=32x32 href=/favicon-32x32.png><link rel=icon type=image/png sizes=16x16 href=/favicon-16x16.png><link rel=manifest href=/manifest.json><link rel=mask-icon href=/safari-pinned-tab.svg color=#5bbad5><link href=/sass/main.min.a2095472a2a8d7ddda1334cf60051cbe40ed55f2467554bb6aa4c17c9bcd27a4.css rel=stylesheet><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.css integrity="sha256-7TyXnr2YU040zfSP+rEcz29ggW4j56/ujTPwjMzyqFY=" crossorigin=anonymous><meta property="og:title" content="一个怪异的C++函数定义方式"><meta property="og:description" content="一个怪异的C++函数定义方式"><meta property="og:type" content="article"><meta property="og:url" content="https://backendhouse.github.io/post/%E4%B8%80%E4%B8%AA%E6%80%AA%E5%BC%82%E7%9A%84c++%E5%87%BD%E6%95%B0%E5%AE%9A%E4%B9%89%E6%96%B9%E5%BC%8F/"><meta property="article:published_time" content="2021-09-21T09:23:08+08:00"><meta property="article:modified_time" content="2021-09-21T09:23:08+08:00"><meta itemprop=name content="一个怪异的C++函数定义方式"><meta itemprop=description content="一个怪异的C++函数定义方式"><meta itemprop=datePublished content="2021-09-21T09:23:08+08:00"><meta itemprop=dateModified content="2021-09-21T09:23:08+08:00"><meta itemprop=wordCount content="880"><meta itemprop=keywords content="Clickhouse,CPP,"><meta name=twitter:card content="summary"><meta name=twitter:title content="一个怪异的C++函数定义方式"><meta name=twitter:description content="一个怪异的C++函数定义方式"><!--[if lte IE 9]><script src=https://cdnjs.cloudflare.com/ajax/libs/classlist/1.1.20170427/classList.min.js></script><![endif]--><!--[if lt IE 9]><script src=https://cdn.jsdelivr.net/npm/html5shiv@3.7.3/dist/html5shiv.min.js></script><script src=https://cdn.jsdelivr.net/npm/respond.js@1.4.2/dest/respond.min.js></script><![endif]--></head><body><div id=mobile-navbar class=mobile-navbar><div class=mobile-header-logo><a href=/ class=logo>后端技术小屋</a></div><div class=mobile-navbar-icon><span></span><span></span><span></span></div></div><nav id=mobile-menu class="mobile-menu slideout-menu"><ul class=mobile-menu-list><a href=/><li class=mobile-menu-item>Home</li></a><a href=/post/><li class=mobile-menu-item>Archives</li></a><a href=/tags/><li class=mobile-menu-item>Tags</li></a><a href=/categories/><li class=mobile-menu-item>Categories</li></a><a href=/about/><li class=mobile-menu-item>About</li></a></ul></nav><div class=container id=mobile-panel><header id=header class=header><div class=logo-wrapper><a href=/ class=logo>后端技术小屋</a></div><nav class=site-navbar><ul id=menu class=menu><li class=menu-item><a class=menu-item-link href=/>Home</a></li><li class=menu-item><a class=menu-item-link href=/post/>Archives</a></li><li class=menu-item><a class=menu-item-link href=/tags/>Tags</a></li><li class=menu-item><a class=menu-item-link href=/categories/>Categories</a></li><li class=menu-item><a class=menu-item-link href=/about/>About</a></li></ul></nav></header><main id=main class=main><div class=content-wrapper><div id=content class=content><article class=post><header class=post-header><h1 class=post-title>一个怪异的C++函数定义方式</h1><div class=post-meta><span class=post-time>2021-09-21</span><div class=post-category><a href=/categories/clickhouse/>Clickhouse</a>
+<a href=/categories/cpp/>CPP</a></div></div></header><div class=post-toc id=post-toc><h2 class=post-toc-title>文章目录</h2><div class="post-toc-content always-active"><nav id=TableOfContents></nav></div></div><div class=post-content><p>在阅读clickhouse代码的过程中，发现有一种函数定义形式很怪异：</p><div class=highlight><pre style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cpp data-lang=cpp>
+<span style=color:#8be9fd>int</span> <span style=color:#50fa7b>main</span>() 
+<span style=color:#ff79c6>try</span>
+{
+    XXX
+}
+<span style=color:#ff79c6>catch</span> (DB<span style=color:#ff79c6>:</span><span style=color:#ff79c6>:</span>Exception <span style=color:#ff79c6>&amp;</span> e)
+{
+    XXX
+}
+</code></pre></div><p>形式如上，函数名之后怎么能不加花括号呢？这是不是不符合语法？查资是一看，原来是我孤陋寡闻了。</p><p><a href=https://en.cppreference.com/w/cpp/language/function-try-block>https://en.cppreference.com/w/cpp/language/function-try-block</a></p><p>上面的代码其实等效于这种形式</p><div class=highlight><pre style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cpp data-lang=cpp><span style=color:#8be9fd>int</span> <span style=color:#50fa7b>main</span>() 
+{
+    <span style=color:#ff79c6>try</span>
+    {
+        xxx
+    }
+    <span style=color:#ff79c6>catch</span> (DB<span style=color:#ff79c6>:</span><span style=color:#ff79c6>:</span>Exception <span style=color:#ff79c6>&amp;</span> e)
+    {
+        xxx
+    }
+}
+</code></pre></div><p>第一种看起来比较怪异的形式在cpp里叫做function-try-block, 第二种就是我们常见的function-body</p><p>那么function-try-block主要使用于哪种场合呢？它是不是能捕获到所有的异常呢？让我们看下文档</p><pre><code>The primary purpose of function-try-blocks is to respond to an exception thrown from the member initializer list in a constructor by logging and rethrowing, modifying the exception object and rethrowing, throwing a different exception instead, or terminating the program. They are rarely used with destructors or with regular functions.
+
+Function-try-block does not catch the exceptions thrown by the copy/move constructors and the destructors of the function parameters passed by value: those exceptions are thrown in context of the caller.
+
+Likewise, function-try-block of the main() function does not catch the exceptions thrown from the constructors and destructors of static objects (except for the constructors of function-local statics).
+</code></pre><p>function-try-block这种形式主要用于类构造函数和main函数中，而很少使用在类析构函数和其他常规函数中。</p><ul><li>在类的构造函数中，function-try-block能够捕获到初始化列表中的异常，用户可以在catch block中打印日志、修改异常、重抛异常。需要注意的是，function-try-block无法捕获传值参数的复制/移动构造函数/析构函数中抛出的异常，这些异常会传递到function-try-block调用者的上下文中。</li><li>在main函数中，function-try-block能够捕获try块中的异常，但是无法捕获静态对象构造和析构过程中抛出的异常</li></ul><p>相关实例如下所示：</p><div class=highlight><pre style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cpp data-lang=cpp><span style=color:#ff79c6>#</span><span style=color:#ff79c6>include</span> <span style=color:#ff79c6>&lt;exception&gt;</span><span style=color:#ff79c6>
+</span><span style=color:#ff79c6></span><span style=color:#ff79c6>#</span><span style=color:#ff79c6>include</span> <span style=color:#ff79c6>&lt;iostream&gt;</span><span style=color:#ff79c6>
+</span><span style=color:#ff79c6></span>
+<span style=color:#ff79c6>class</span> <span style=color:#50fa7b>MyException</span> <span style=color:#ff79c6>:</span> <span style=color:#ff79c6>public</span> std<span style=color:#ff79c6>:</span><span style=color:#ff79c6>:</span>exception 
+{
+<span style=color:#ff79c6>public</span><span style=color:#ff79c6>:</span>
+    MyException(<span style=color:#ff79c6>const</span> <span style=color:#8be9fd>char</span><span style=color:#ff79c6>*</span> msg) <span style=color:#ff79c6>:</span> msg(msg) { }
+    <span style=color:#ff79c6>virtual</span> <span style=color:#ff79c6>const</span> <span style=color:#8be9fd>char</span><span style=color:#ff79c6>*</span> <span style=color:#50fa7b>what</span>() <span style=color:#ff79c6>const</span> <span style=color:#ff79c6>throw</span>() { <span style=color:#ff79c6>return</span> msg.c_str(); }
+
+<span style=color:#ff79c6>private</span><span style=color:#ff79c6>:</span>
+    std<span style=color:#ff79c6>:</span><span style=color:#ff79c6>:</span>string msg;
+};
+
+<span style=color:#ff79c6>class</span> <span style=color:#50fa7b>M</span>
+{
+<span style=color:#ff79c6>public</span><span style=color:#ff79c6>:</span>
+    <span style=color:#ff79c6>explicit</span> M(size_t size)
+    {
+        <span style=color:#ff79c6>throw</span> <span style=color:#50fa7b>MyException</span>(<span style=color:#f1fa8c></span><span style=color:#f1fa8c>&#34;</span><span style=color:#f1fa8c>exception from constructor</span><span style=color:#f1fa8c>&#34;</span>);
+    }
+
+    M(<span style=color:#ff79c6>const</span> M <span style=color:#ff79c6>&amp;</span> other)
+    {
+        <span style=color:#ff79c6>throw</span> <span style=color:#50fa7b>MyException</span>(<span style=color:#f1fa8c></span><span style=color:#f1fa8c>&#34;</span><span style=color:#f1fa8c>exception from copy constructor</span><span style=color:#f1fa8c>&#34;</span>);
+    }
+
+    M(M <span style=color:#ff79c6>&amp;</span><span style=color:#ff79c6>&amp;</span> other)
+    {
+        <span style=color:#ff79c6>throw</span> <span style=color:#50fa7b>MyException</span>(<span style=color:#f1fa8c></span><span style=color:#f1fa8c>&#34;</span><span style=color:#f1fa8c>exception from move constructor</span><span style=color:#f1fa8c>&#34;</span>);
+    }
+    
+    <span style=color:#ff79c6>~</span>M()
+    {
+        <span style=color:#6272a4>// throw MyException(&#34;exception from destructor&#34;);
+</span><span style=color:#6272a4></span>    }
+};
+
+<span style=color:#ff79c6>class</span> <span style=color:#50fa7b>A</span>
+{
+<span style=color:#ff79c6>public</span><span style=color:#ff79c6>:</span>
+    <span style=color:#ff79c6>explicit</span> A() <span style=color:#ff79c6>try</span><span style=color:#ff79c6>:</span> 
+            m1(<span style=color:#bd93f9>10</span>), 
+            m2(m1), 
+            m3(std<span style=color:#ff79c6>:</span><span style=color:#ff79c6>:</span>move(m2))
+    {
+    }
+    <span style=color:#ff79c6>catch</span> (std<span style=color:#ff79c6>:</span><span style=color:#ff79c6>:</span>exception <span style=color:#ff79c6>&amp;</span> e)
+    {
+        std<span style=color:#ff79c6>:</span><span style=color:#ff79c6>:</span>cout <span style=color:#ff79c6>&lt;</span><span style=color:#ff79c6>&lt;</span> <span style=color:#f1fa8c></span><span style=color:#f1fa8c>&#34;</span><span style=color:#f1fa8c>catch exception in A:A: </span><span style=color:#f1fa8c>&#34;</span> <span style=color:#ff79c6>&lt;</span><span style=color:#ff79c6>&lt;</span> e.what() <span style=color:#ff79c6>&lt;</span><span style=color:#ff79c6>&lt;</span> std<span style=color:#ff79c6>:</span><span style=color:#ff79c6>:</span>endl;
+        <span style=color:#ff79c6>throw</span>;
+    }
+
+    <span style=color:#ff79c6>~</span>A() <span style=color:#ff79c6>=</span> <span style=color:#ff79c6>default</span>;
+<span style=color:#ff79c6>private</span><span style=color:#ff79c6>:</span>
+    M m1;
+    M m2;
+    M m3;
+};
+
+<span style=color:#8be9fd>int</span> <span style=color:#50fa7b>main</span>()
+<span style=color:#ff79c6>try</span>
+{
+    A a;
+}
+<span style=color:#ff79c6>catch</span> (std<span style=color:#ff79c6>:</span><span style=color:#ff79c6>:</span>exception <span style=color:#ff79c6>&amp;</span> e)
+{
+    std<span style=color:#ff79c6>:</span><span style=color:#ff79c6>:</span>cout <span style=color:#ff79c6>&lt;</span><span style=color:#ff79c6>&lt;</span> <span style=color:#f1fa8c></span><span style=color:#f1fa8c>&#34;</span><span style=color:#f1fa8c>catch exception in main: </span><span style=color:#f1fa8c>&#34;</span> <span style=color:#ff79c6>&lt;</span><span style=color:#ff79c6>&lt;</span> e.what() <span style=color:#ff79c6>&lt;</span><span style=color:#ff79c6>&lt;</span> std<span style=color:#ff79c6>:</span><span style=color:#ff79c6>:</span>endl;
+}
+</code></pre></div><p>执行初始化列表<code>m1(10)</code>的时候会抛出异常，然后被A::A中的try catch捕捉到，重新抛出到main函数的上下文，接着被main中的try catch捕捉到。因此运行结果为</p><pre><code>catch exception in A:A: exception from constructor
+catch exception in main: exception from constructor
+</code></pre></div><div class=post-copyright><p class=copyright-item><span class=item-title>文章作者</span>
+<span class=item-content>后端侠</span></p><p class=copyright-item><span class=item-title>上次更新</span>
+<span class=item-content>2021-09-21</span></p></div><footer class=post-footer><div class=post-tags><a href=/tags/clickhouse/>Clickhouse</a>
+<a href=/tags/cpp/>CPP</a></div><nav class=post-nav><a class=next href=/post/%E8%AF%91clickhouse%E4%B8%8Eldap%E9%9B%86%E6%88%90%E4%BA%8C/><span class="next-text nav-default">【译】Clickhouse与LDAP集成（二）</span>
+<span class="next-text nav-mobile">下一篇</span>
+<i class="iconfont icon-right"></i></a></nav></footer></article></div><div id=comments-gitment></div><link rel=stylesheet href=https://cdn.jsdelivr.net/gh/theme-next/theme-next-gitment@1/default.min.css crossorigin=anonymous><script src=https://cdn.jsdelivr.net/gh/theme-next/theme-next-gitment@1/gitment.browser.min.js crossorigin=anonymous></script><script type=text/javascript>var gitment=new Gitment({id:'2021-09-21 09:23:08 \x2b0800 \x2b0800',title:'一个怪异的C\x2b\x2b函数定义方式',link:decodeURI(location.href),desc:'在阅读clickhouse代码的过程中，发现有一种函数定义形式很怪异： int main() try { XXX } catch (DB::Exception \x26amp; e) { XXX } 形式如上，函数名之后怎么能不加花括号呢？这是',owner:'BackendHouse',repo:'BackendHouse\/blog_sources',oauth:{client_id:'a75baa5941ec8d9293bd',client_secret:'f63c9c3e360760ee9200e364ac839d0007cb0af7'}});gitment.render('comments-gitment');</script><noscript>Please enable JavaScript to view the <a href=https://github.com/imsun/gitment>comments powered by gitment.</a></noscript></div></main><footer id=footer class=footer><div class=social-links><a href=http://github.com/%e5%90%8e%e7%ab%af%e4%be%a0 class="iconfont icon-github" title=github></a><a href=https://backendhouse.github.io/index.xml type=application/rss+xml class="iconfont icon-rss" title=rss></a></div><div class=copyright><span class=power-by>由 <a class=hexo-link href=https://gohugo.io>Hugo</a> 强力驱动</span>
+<span class=division>|</span>
+<span class=theme-info>主题 -
+<a class=theme-link href=https://github.com/olOwOlo/hugo-theme-even>Even</a></span>
+<span class=copyright-year>&copy;
+2017 -
+2021<span class=heart><i class="iconfont icon-heart"></i></span><span>后端侠</span></span></div></footer><div class=back-to-top id=back-to-top><i class="iconfont icon-up"></i></div></div><script src="/lib/highlight/highlight.pack.js?v=20171001"></script><script src=https://cdn.jsdelivr.net/npm/jquery@3.2.1/dist/jquery.min.js integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin=anonymous></script><script src=https://cdn.jsdelivr.net/npm/slideout@1.0.1/dist/slideout.min.js integrity="sha256-t+zJ/g8/KXIJMjSVQdnibt4dlaDxc9zXr/9oNPeWqdg=" crossorigin=anonymous></script><script src=https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.js integrity="sha256-XVLffZaxoWfGUEbdzuLi7pwaUJv1cecsQJQqGLe7axY=" crossorigin=anonymous></script><script type=text/javascript src=/js/main.min.c12618f9a600c40bd024996677e951e64d3487006775aeb22e200c990006c5c7.js></script></body></html>

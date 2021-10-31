@@ -1,0 +1,127 @@
+---
+title: "clickhouse如何解决GLIBC不兼容问题" # Title of the blog post.   
+date: 2021-10-31T15:16:21+08:00 # Date of post creation.   
+description: "" # Description used for search engine.   
+featured: true # Sets if post is a featured post, making appear on the home page side bar.   
+draft: true # Sets whether to render this page. Draft of true will not be rendered.   
+toc: true # Controls if a table of contents should be generated for first-level links automatically.   
+# menu: main   
+featureImage: "/images/path/file.jpg" # Sets featured image on blog post.   
+thumbnail: "/images/path/thumbnail.png" # Sets thumbnail image appearing inside card on homepage.   
+shareImage: "/images/path/share.png" # Designate a separate image for social media sharing.   
+codeMaxLines: 10 # Override global value for how many lines within a code block before auto-collapsing.   
+codeLineNumbers: false # Override global value for showing of line numbers within code block.   
+figurePositionShow: true # Override global value for showing the figure label.   
+categories:   
+  - clickhouse
+tags:   
+  - clickhouse 
+---
+
+# 介绍
+
+首先解释下为什么会有GLIBC不兼容问题：在clickhouse的编译环境中ubuntu版本是20, 而运行环境中是16，不同ubuntu版本支持的GLIBC版本不一样，因此将ubuntu20上编译出来的ck放在ubuntu16下运行时，便会出现兼容性问题。虽然ck编译时绝大部分库都是静态链接的，但是glibc却是个例外。
+
+``` bash
+$ ldd ./clickhouse    
+	linux-vdso.so.1 (0x00007ffcc9f7a000)
+	libpthread.so.0 => /usr/lib/x86_64-linux-gnu/libpthread.so.0 (0x00007f2e84b57000)
+	librt.so.1 => /usr/lib/x86_64-linux-gnu/librt.so.1 (0x00007f2e84b4c000)
+	libdl.so.2 => /usr/lib/x86_64-linux-gnu/libdl.so.2 (0x00007f2e84b46000)
+	libc.so.6 => /usr/lib/x86_64-linux-gnu/libc.so.6 (0x00007f2e84954000)
+	libm.so.6 => /usr/lib/x86_64-linux-gnu/libm.so.6 (0x00007f2e84805000)
+	/lib64/ld-linux-x86-64.so.2 (0x00007f2e84b7c000)
+
+```
+
+解决方法有几个思路：
+
+- 将编译环境改成ubuntu16：系统版本太老，很多必要的依赖无法成功安装，影响编译。不可行
+- 将运行环境改成ubuntu20:  生产环境不是说动就动的，不可行
+- 编译时静态链接glibc：副作用较多(https://stackoverflow.com/questions/57476533/why-is-statically-linking-glibc-discouraged), 实测不可行
+- 将glibc相关的共享库随ck binary一块打包：需要升级打包脚本，代价相对较小
+
+接下来我们总结如何根据最后一种思路解决GLIBC的兼容性问题
+
+# 解决
+
+## 打包动态库
+
+vim copylib.sh 
+
+```bash
+#!/bin/bash
+
+# copylib.sh
+
+LibDir=$PWD"/lib"
+
+Target=$1
+
+lib_array=($(ldd $Target | grep -o "/.*" | grep -o "/.*/[^[:space:]]*"))
+
+$(mkdir $LibDir)
+
+for Variable in ${lib_array[@]}
+do
+	cp "$Variable" $LibDir
+done
+
+```
+
+上述脚本首先通过ldd得到binary依赖的动态库，然后将so文件复制到./lib目录
+
+
+
+./copylib.sh clickhouse 
+
+ 结果如下
+
+``` bash
+$ ll ./lib                                            
+total 3728
+-rw-r--r-- 1 root root   40040 Oct 31 16:45 librt.so.1
+-rwxr-xr-x 1 root root  157224 Oct 31 16:45 libpthread.so.0
+-rw-r--r-- 1 root root   18816 Oct 31 16:45 libdl.so.2
+-rwxr-xr-x 1 root root 2029224 Oct 31 16:45 libc.so.6
+-rw-r--r-- 1 root root 1369352 Oct 31 16:45 libm.so.6
+-rwxr-xr-x 1 root root  191472 Oct 31 16:45 ld-linux-x86-64.so.2
+```
+
+
+
+# 修改ELF
+
+首先安装patchelf (https://github.com/NixOS/patchelf.git)  
+
+使用patchelf工具修改clickhouse二进制文件的ELF信息
+
+``` bash
+patchelf --set-rpath <prefix>/lib  clickhouse
+patchelf --set-interpreter <prefix>/lib/ld-linux-x86-64.so.2 clickhouse
+```
+
+其中<prefix>应当是clickhouse运行环境中lib所在的目录
+
+完成修改后，结果如下：
+
+```bash
+$ ldd ./clickhouse
+	linux-vdso.so.1 =>  (0x00007ffddf3dc000)
+	libc.so.6 => /data/services/clickhouse/lib/libc.so.6 (0x00007fbf1533f000)
+	/data/services/clickhouse/lib/ld-linux-x86-64.so.2 => /lib64/ld-linux-x86-64.so.2 (0x00007fbf1530d000)
+	libm.so.6 => /data/services/clickhouse/lib/libm.so.6 (0x00007fbf151be000)
+	librt.so.1 => /data/services/clickhouse/lib/librt.so.1 (0x00007fbf15334000)
+	libpthread.so.0 => /data/services/clickhouse/lib/libpthread.so.0 (0x00007fbf1519b000)
+	libdl.so.2 => /data/services/clickhouse/lib/libdl.so.2 (0x00007fbf15195000)
+```
+
+
+
+## 运行clickhouse
+
+过程略
+
+# 参考
+https://blog.csdn.net/itas109/article/details/106751869
+

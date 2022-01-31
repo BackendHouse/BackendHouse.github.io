@@ -1,0 +1,104 @@
+<!doctype html><html lang=zh-cn><head><meta charset=utf-8><meta http-equiv=x-ua-compatible content="IE=edge,chrome=1"><title>ClickHouse 22.1版本新特性盘点 - 后端技术小屋</title><meta name=renderer content="webkit"><meta name=viewport content="width=device-width,initial-scale=1,maximum-scale=1"><meta http-equiv=cache-control content="no-transform"><meta http-equiv=cache-control content="no-siteapp"><meta name=theme-color content="#f8f5ec"><meta name=msapplication-navbutton-color content="#f8f5ec"><meta name=apple-mobile-web-app-capable content="yes"><meta name=apple-mobile-web-app-status-bar-style content="#f8f5ec"><meta name=author content="后端侠"><meta name=description content="ClickHouse 22.1版本新特性盘点"><meta name=keywords content="Hugo,theme,后端侠"><meta name=generator content="Hugo 0.62.2 with theme even"><link rel=canonical href=https://backendhouse.github.io/post/%E8%AF%91clickhouse-22.1%E6%96%B0%E7%89%B9%E6%80%A7%E7%9B%98%E7%82%B9/><link rel=apple-touch-icon sizes=180x180 href=/apple-touch-icon.png><link rel=icon type=image/png sizes=32x32 href=/favicon-32x32.png><link rel=icon type=image/png sizes=16x16 href=/favicon-16x16.png><link rel=manifest href=/manifest.json><link rel=mask-icon href=/safari-pinned-tab.svg color=#5bbad5><link href=/sass/main.min.a2095472a2a8d7ddda1334cf60051cbe40ed55f2467554bb6aa4c17c9bcd27a4.css rel=stylesheet><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.css integrity="sha256-7TyXnr2YU040zfSP+rEcz29ggW4j56/ujTPwjMzyqFY=" crossorigin=anonymous><meta property="og:title" content="ClickHouse 22.1版本新特性盘点"><meta property="og:description" content="ClickHouse 22.1版本新特性盘点"><meta property="og:type" content="article"><meta property="og:url" content="https://backendhouse.github.io/post/%E8%AF%91clickhouse-22.1%E6%96%B0%E7%89%B9%E6%80%A7%E7%9B%98%E7%82%B9/"><meta property="article:published_time" content="2021-01-31T14:23:08+08:00"><meta property="article:modified_time" content="2021-01-31T14:23:08+08:00"><meta itemprop=name content="ClickHouse 22.1版本新特性盘点"><meta itemprop=description content="ClickHouse 22.1版本新特性盘点"><meta itemprop=datePublished content="2021-01-31T14:23:08+08:00"><meta itemprop=dateModified content="2021-01-31T14:23:08+08:00"><meta itemprop=wordCount content="3322"><meta itemprop=keywords content="Clickhouse,"><meta name=twitter:card content="summary"><meta name=twitter:title content="ClickHouse 22.1版本新特性盘点"><meta name=twitter:description content="ClickHouse 22.1版本新特性盘点"><!--[if lte IE 9]><script src=https://cdnjs.cloudflare.com/ajax/libs/classlist/1.1.20170427/classList.min.js></script><![endif]--><!--[if lt IE 9]><script src=https://cdn.jsdelivr.net/npm/html5shiv@3.7.3/dist/html5shiv.min.js></script><script src=https://cdn.jsdelivr.net/npm/respond.js@1.4.2/dest/respond.min.js></script><![endif]--></head><body><div id=mobile-navbar class=mobile-navbar><div class=mobile-header-logo><a href=/ class=logo>后端技术小屋</a></div><div class=mobile-navbar-icon><span></span><span></span><span></span></div></div><nav id=mobile-menu class="mobile-menu slideout-menu"><ul class=mobile-menu-list><a href=/><li class=mobile-menu-item>Home</li></a><a href=/post/><li class=mobile-menu-item>Archives</li></a><a href=/tags/><li class=mobile-menu-item>Tags</li></a><a href=/categories/><li class=mobile-menu-item>Categories</li></a><a href=/about/><li class=mobile-menu-item>About</li></a></ul></nav><div class=container id=mobile-panel><header id=header class=header><div class=logo-wrapper><a href=/ class=logo>后端技术小屋</a></div><nav class=site-navbar><ul id=menu class=menu><li class=menu-item><a class=menu-item-link href=/>Home</a></li><li class=menu-item><a class=menu-item-link href=/post/>Archives</a></li><li class=menu-item><a class=menu-item-link href=/tags/>Tags</a></li><li class=menu-item><a class=menu-item-link href=/categories/>Categories</a></li><li class=menu-item><a class=menu-item-link href=/about/>About</a></li></ul></nav></header><main id=main class=main><div class=content-wrapper><div id=content class=content><article class=post><header class=post-header><h1 class=post-title>ClickHouse 22.1版本新特性盘点</h1><div class=post-meta><span class=post-time>2021-01-31</span><div class=post-category><a href=/categories/clickhouse/>Clickhouse</a></div></div></header><div class=post-toc id=post-toc><h2 class=post-toc-title>文章目录</h2><div class="post-toc-content always-active"><nav id=TableOfContents><ul><li><a href=#clickhouse-221版本新特性盘点>ClickHouse 22.1版本新特性盘点</a><ul><li><a href=#schema自动推导>schema自动推导</a></li><li><a href=#clickhouse-client实时显示query资源占用>clickhouse-client实时显示query资源占用</a></li><li><a href=#副本粒度的并行查询>副本粒度的并行查询</a></li><li><a href=#服务发现>服务发现</a></li><li><a href=#列的稀疏编码>列的稀疏编码</a></li><li><a href=#clickhouse的诊断工具-httpsclickhousecomblogen2022clickhouse-v221-releaseddiagnostic-tool-for-clickhouse>ClickHouse的诊断工具[ ]()</a></li><li><a href=#第三方集成>第三方集成</a></li><li><a href=#统计函数>统计函数</a></li><li><a href=#-还有很多-httpsclickhousecomblogen2022clickhouse-v221-releasedand-many-more>&mldr; 还有很多[ ]()</a></li></ul></li></ul></nav></div></div><div class=post-content><h1 id=clickhouse-221版本新特性盘点>ClickHouse 22.1版本新特性盘点</h1><blockquote><p>作者：<em>Alexey Milovidov</em></p><p>原文链接：https://clickhouse.com/blog/en/2022/clickhouse-v22.1-released/</p></blockquote><p>22.1 是我们新年的第一个版本。它包括来自 133 个贡献者的 2,599 个新提交，其中包括 44 个新贡献者：</p><blockquote><p>13DaGGeR, Adri Fernandez, Alexey Gusev, Anselmo D. Adams, Antonio Andelic, Ben, Boris Kuschel, Christoph Wurm, Chun-Sheng, Li, Dao, DimaAmega, Dmitrii Mokhnatkin, Harry-Lee, Justin Hilliard, MaxTheHuman, Meena-Renganathan, Mojtaba Yaghoobzadeh, N. Kolotov, Niek, Orkhan Zeynalli, Rajkumar, Ryad ZENINE, Sergei Trifonov, Suzy Wang, TABLUM.IO, Vitaly Artemyev, Xin Wang, Yatian Xu, Youenn Lebras, dalei2019, fanzhou, gulige, lgbo-ustc, minhthucdao , mreddy017, msirm, olevino, peter279k, save-my-heart, tekeri, usurai, zhoubintao, 李扬。</p></blockquote><p>不要忘记在您的服务器上运行<code>SELECT * FROM system.contributors</code>查看贡献者！</p><p>让我们描述一下 22.1 中最重要的新特性。</p><h2 id=schema自动推导>schema自动推导</h2><p>以下面的查询为例：</p><pre><code>SELECT * FROM url('https://datasets.clickhouse.com/github_events_v2.native.xz', Native,
+$$
+    file_time DateTime,
+    event_type Enum('CommitCommentEvent' = 1, 'CreateEvent' = 2, 'DeleteEvent' = 3, 'ForkEvent' = 4,
+                    'GollumEvent' = 5, 'IssueCommentEvent' = 6, 'IssuesEvent' = 7, 'MemberEvent' = 8,
+                    'PublicEvent' = 9, 'PullRequestEvent' = 10, 'PullRequestReviewCommentEvent' = 11,
+                    'PushEvent' = 12, 'ReleaseEvent' = 13, 'SponsorshipEvent' = 14, 'WatchEvent' = 15,
+                    'GistEvent' = 16, 'FollowEvent' = 17, 'DownloadEvent' = 18, 'PullRequestReviewEvent' = 19,
+                    'ForkApplyEvent' = 20, 'Event' = 21, 'TeamAddEvent' = 22),
+    actor_login LowCardinality(String),
+    repo_name LowCardinality(String),
+    created_at DateTime,
+    updated_at DateTime,
+    action Enum('none' = 0, 'created' = 1, 'added' = 2, 'edited' = 3, 'deleted' = 4, 'opened' = 5, 'closed' = 6, 'reopened' = 7, 'assigned' = 8, 'unassigned' = 9,
+                'labeled' = 10, 'unlabeled' = 11, 'review_requested' = 12, 'review_request_removed' = 13, 'synchronize' = 14, 'started' = 15, 'published' = 16, 'update' = 17, 'create' = 18, 'fork' = 19, 'merged' = 20),
+    comment_id UInt64,
+    body String,
+    path String,
+    position Int32,
+    line Int32,
+    ref LowCardinality(String),
+    ref_type Enum('none' = 0, 'branch' = 1, 'tag' = 2, 'repository' = 3, 'unknown' = 4),
+    creator_user_login LowCardinality(String),
+    number UInt32,
+    title String,
+    labels Array(LowCardinality(String)),
+    state Enum('none' = 0, 'open' = 1, 'closed' = 2),
+    locked UInt8,
+    assignee LowCardinality(String),
+    assignees Array(LowCardinality(String)),
+    comments UInt32,
+    author_association Enum('NONE' = 0, 'CONTRIBUTOR' = 1, 'OWNER' = 2, 'COLLABORATOR' = 3, 'MEMBER' = 4, 'MANNEQUIN' = 5),
+    closed_at DateTime,
+    merged_at DateTime,
+    merge_commit_sha String,
+    requested_reviewers Array(LowCardinality(String)),
+    requested_teams Array(LowCardinality(String)),
+    head_ref LowCardinality(String),
+    head_sha String,
+    base_ref LowCardinality(String),
+    base_sha String,
+    merged UInt8,
+    mergeable UInt8,
+    rebaseable UInt8,
+    mergeable_state Enum('unknown' = 0, 'dirty' = 1, 'clean' = 2, 'unstable' = 3, 'draft' = 4),
+    merged_by LowCardinality(String),
+    review_comments UInt32,
+    maintainer_can_modify UInt8,
+    commits UInt32,
+    additions UInt32,
+    deletions UInt32,
+    changed_files UInt32,
+    diff_hunk String,
+    original_position UInt32,
+    commit_id String,
+    original_commit_id String,
+    push_size UInt32,
+    push_distinct_size UInt32,
+    member_login LowCardinality(String),
+    release_tag_name String,
+    release_name String,
+    review_state Enum('none' = 0, 'approved' = 1, 'changes_requested' = 2, 'commented' = 3, 'dismissed' = 4, 'pending' = 5)
+$$)
+</code></pre><p>在这个查询中，我们使用table function<code>url</code>导入数据。数据以文件扩展名为<code>.native.xz</code>的文件的形式发布在 HTTP 服务器上。这个查询最烦人的一点是我们必须指定这个文件的数据结构和格式。</p><p>在新版本 22.1 中，则不用如此复杂：</p><pre><code>SELECT * FROM url('https://datasets.clickhouse.com/github_events_v2.native.xz')
+</code></pre><p>比原来简单多了！这是怎么做到的呢？</p><p>首先，我们从文件扩展名中自动检测数据格式。这里是<code>.native.xz</code>，所以我们知道数据是经过<code>xz</code>（LZMA2）压缩，用<code>Native</code>格式来表示的。而<code>Native</code>格式中已经包含有关列的类型和名称的所有信息，我们只需读取和利用这些信息。</p><p>这个特性适用于以下格式：<code>Native</code>, <code>Avro</code>, <code>Parquet</code>, <code>ORC</code>,<code>Arrow</code>以及<code>CSVWithNamesAndTypes</code>, <code>TSVWithNamesAndTypes</code>。</p><p>该特性也适用于以下表函数：<code>s3</code>, <code>file</code>, <code>hdfs</code>, <code>url</code>, <code>s3Cluster</code>, <code>hdfsCluster</code>.</p><p>该特性中包含了很多技巧：它不需要将整个文件读入内存，例如Parquet格式在文件末尾有元数据。因此，我们首先读取 header 以查找元数据所在的位置，然后进行范围请求以读取有关列及其类型的元数据，然后继续读取请求的列。如果文件很小，它将通过单个请求读取。</p><p>如果只从文件中提取数据结构而不进行数据处理，可以使用 DESCRIBE 查询：</p><pre><code>DESCRIBE url('https://datasets.clickhouse.com/github_events_v2.native.xz')
+</code></pre><p>数据结构也可以从<code>JSONEachRow</code>、<code>CSV</code>、<code>TSV</code>、<code>CSVWithNames</code>、<code>TSVWithNames</code>、<code>MsgPack</code>, <code>Values</code>和<code>Regexp</code>中自动推断。<code>CSV</code>支持Float64 或 String类型的推断 。<code>JSONEachRow</code>支持数组类型的推断，包括多维数组。数组中元素类型不一致时，会被自动推断成元组，Objects则被映射到<code>Map</code>数据类型。</p><p>如果格式中没有指定列名（如不带<code>Header</code>的<code>CSV</code>），则使用<code>c1</code>, <code>c2</code>, &mldr;表示每一列。</p><p>文件格式可从扩展名中推断而来：<code>csv</code>, <code>tsv</code>, <code>native</code>, <code>parquet</code>, <code>pb</code>, <code>ndjson</code>, <code>orc</code>&mldr; 例如，<code>.ndjson</code>文件在 ClickHouse 中被识别为<code>JSONEachRow</code>格式，而<code>.csv</code>识别为无<code>Header</code>的<code>CSV</code>格式，如果您要使用<code>CSVWithNames</code>格式，可以在query中显式指定格式。</p><p>我们支持“按需模式”查询。例如，自动检测到的<code>TSV</code>格式数据类型是字符串，但您可以使用<code>::</code>运算符优化查询中的类型：</p><pre><code>SELECT c1 AS domain, uniq(c2::UInt64), count() AS cnt
+  FROM file('hits.tsv')
+  GROUP BY domain ORDER BY cnt DESC LIMIT 10
+</code></pre><p>更方便的是，<code>LineAsString</code>格式<code>RawBLOB</code>也可以获得类型推断。试试这个查询，看看我更喜欢如何阅读我最喜欢的网站：</p><pre><code>SELECT extractTextFromHTML(*)
+    FROM url('https://news.ycombinator.com/', LineAsString);
+</code></pre><p>schema自动检测也适用于创建<code>Merge</code>,<code>Distributed</code>和<code>ReplicatedMegreTree</code>表。创建第一个副本时，必须指定表结构。但是在创建所有后续副本时，您只需要<code>CREATE TABLE hits ENGINE = ReplicatedMegreTree(...)</code>，而无需列出每一列，因为这些信息将从另一个副本复制。</p><p>此功能由Pavel Kruglov在Igor Baliuk的初始工作的启发下实现，并由ZhongYuanKai 添加。</p><h2 id=clickhouse-client实时显示query资源占用>clickhouse-client实时显示query资源占用</h2><p><code>clickhouse-client</code>是我最喜欢的 ClickHouse客户端。它是所有命令行工具的典范。</p><p>现在它可以直接在进度条中实时显示当前查询CPU 和内存的使用情况：</p><p><img src=https://blog-images.clickhouse.com/en/2022/clickhouse-v22-1/progress.png alt=资源使用></p><p>对于分布式查询，它显示了每个主机的总内存使用量和最大内存使用量。</p><p>这个特性是通过<strong>Dmitry Novik</strong>实现的分布式metrics转发实现的。我已经将这些分布式metrics集成到clickhouse-client，现在可以使用Native ClickHouse协议在每个ClickHouse客户端中添加类似的信息。</p><h2 id=副本粒度的并行查询>副本粒度的并行查询</h2><p>ClickHouse 是一个分布式 MPP DBMS。它可以向上扩展以使用一台服务器上的所有 CPU 内核，并向外扩展以使用集群中多个分片的计算资源。</p><p>但是每个分片通常包含多个副本。默认情况下，ClickHouse 在每个分片上仅使用一个副本的资源。例如，如果您有一个由 6 个服务器组成的集群，每个服务器上有 3 个分片和两个副本，那么查询将只使用三个服务器而不是全部六个。</p><p>有一个启用选项<code>max_parallel_replicas</code>，但该选项需要指定“采样键”，使用不方便且无法很好地扩展。</p><p>现在我们有一个选项来启用新的并行处理算法：<code>allow_experimental_parallel_reading_from_replicas</code>. 如果启用，副本将<em>动态</em>选择并在它们之间分配工作。</p><p>即使副本具有更少或更高数量的计算资源，它也能完美运行。即使某些副本是陈旧的，它也会给出完整的结果。</p><p>此功能由<strong>Nikita Mikhaylov实现</strong></p><h2 id=服务发现>服务发现</h2><p>在集群中添加或删除节点时，现在您不必在每台服务器上更新配置。只需在<code>remote_server</code>中使用<code>&lt;discovery></code>配置，副本就会自行注册：</p><pre><code>&lt;allow_experimental_cluster_discovery&gt;1
+&lt;/allow_experimental_cluster_discovery&gt;
+
+&lt;remote_servers&gt;
+    &lt;auto_cluster&gt;
+        &lt;discovery&gt;
+            &lt;path&gt;/clickhouse/discovery/auto_cluster&lt;/path&gt;
+            &lt;shard&gt;1&lt;/shard&gt;
+        &lt;/discovery&gt;
+    &lt;/auto_cluster&gt;
+&lt;/remote_servers&gt;
+</code></pre><p>添加新副本时无需修改配置！</p><p>此功能由<strong>Vladimir Cherkasov</strong>实现。</p><h2 id=列的稀疏编码>列的稀疏编码</h2><p>如果一列主要包含零，我们可以将其编码为稀疏格式并自动优化计算！</p><p>它是一种特殊的列编码，类似于<code>LowCardinality</code>，但它是完全透明的并且是自动工作的。</p><pre><code>CREATE TABLE test.hits ...
+ENGINE = MergeTree ORDER BY ...
+SETTINGS ratio_of_defaults_for_sparse_serialization = 0.9
+</code></pre><p>它可以更好地压缩数据并优化计算，因为稀疏列中的数据将在内存中以稀疏格式直接处理。</p><p>ClickHouse会在插入时根据column统计信息决定是否采用稀疏编码，并在后台merge时重新更新。</p><p>由<strong>Anton Popov</strong>开发。</p><p>后续我们还想让 LowCardinality 编码自动进行，敬请期待！</p><h2 id=clickhouse的诊断工具-httpsclickhousecomblogen2022clickhouse-v221-releaseddiagnostic-tool-for-clickhouse>ClickHouse的诊断工具[ ](<a href=https://clickhouse.com/blog/en/2022/clickhouse-v22.1-released/#diagnostic-tool-for-clickhouse>https://clickhouse.com/blog/en/2022/clickhouse-v22.1-released/#diagnostic-tool-for-clickhouse</a>)</h2><p>这是来自 Yandex Cloud 团队的礼物。他们有一个工具来收集有关 ClickHouse 实例的报告，以提供所有需要的支持信息。他们决定将这个工具贡献给开源！</p><p>您可以在此处找到该工具：<a href=https://github.com/ClickHouse/ClickHouse/tree/master/utils/clickhouse-diagnostics>utils/clickhouse-diagnostics</a></p><p>由<strong>Alexander Burmak</strong>开发.</p><h2 id=第三方集成>第三方集成</h2><p>22.1 中添加了许多新的集成：</p><p><strong>与Hive</strong>集成作为 SELECT 查询的外部表引擎，由<strong>Taiyang Li</strong>提供并由<strong>Ksenia Sumarokova</strong> review。</p><p>与类似于S3的<strong>Azure Blob 存储</strong>集成，由<strong>Jakub Kuklis</strong>贡献并由<strong>Ksenia Sumarokova</strong> review。</p><p>支持类似于<strong>s3Cluster</strong>的<strong>hdfsCluster</strong>表功能，由<strong>Yuzhichang Yu</strong>贡献，<strong>Nikita Mikhailov</strong> review。</p><h2 id=统计函数>统计函数</h2><p>我希望你一直梦想着在 ClickHouse 中计算 Cramer 的 V 和 Theil 的 U 系数，因为现在我们已经为你准备好了这些函数。</p><pre><code>:) SELECT cramersV(URL, URLDomain) FROM test.hits
+
+0.98
+
+:) SELECT cramersV(URLDomain, ResolutionWidth) FROM test.hits
+
+0.27
+</code></pre><p>它可以计算分类（离散）值之间的某种依赖关系。你可以这样想：有一个相关函数<code>corr</code>，但它只适用于线性依赖；有一个秩相关函数<code>rankCorr</code>，但它仅适用于有序值。现在有一些函数可以计算<em>离散</em>值。</p><p>开发人员：<strong>Artem Tsyganov</strong>、<strong>Ivan Belyaev</strong>、<strong>Alexey Milovidov</strong>。</p><h2 id=-还有很多-httpsclickhousecomblogen2022clickhouse-v221-releasedand-many-more>&mldr; 还有很多[ ](<a href=https://clickhouse.com/blog/en/2022/clickhouse-v22.1-released/#and-many-more>https://clickhouse.com/blog/en/2022/clickhouse-v22.1-released/#and-many-more</a>)</h2><p>阅读 22.1 版本的<a href=https://github.com/ClickHouse/ClickHouse/blob/master/CHANGELOG.md>完整变更日志</a>并遵循<a href=https://github.com/ClickHouse/ClickHouse/issues/32513>路线图</a>。</p></div><div class=post-copyright><p class=copyright-item><span class=item-title>文章作者</span>
+<span class=item-content>后端侠</span></p><p class=copyright-item><span class=item-title>上次更新</span>
+<span class=item-content>2021-01-31</span></p></div><footer class=post-footer><div class=post-tags><a href=/tags/clickhouse/>Clickhouse</a></div><nav class=post-nav><a class=prev href=/post/c-c++%E5%85%B3%E9%94%AE%E5%AD%97%E4%B9%8Brestrict/><i class="iconfont icon-left"></i><span class="prev-text nav-default">C/C++关键字之restrict</span>
+<span class="prev-text nav-mobile">上一篇</span></a>
+<a class=next href=/post/c++%E4%BB%A3%E7%A0%81%E6%A8%A1%E6%9D%BF%E4%B9%8Bcrtp/><span class="next-text nav-default">C++代码模板之CRTP</span>
+<span class="next-text nav-mobile">下一篇</span>
+<i class="iconfont icon-right"></i></a></nav></footer></article></div><div id=comments-gitment></div><link rel=stylesheet href=https://cdn.jsdelivr.net/gh/theme-next/theme-next-gitment@1/default.min.css crossorigin=anonymous><script src=https://cdn.jsdelivr.net/gh/theme-next/theme-next-gitment@1/gitment.browser.min.js crossorigin=anonymous></script><script type=text/javascript>var gitment=new Gitment({id:'2021-01-31 14:23:08 \x2b0800 \x2b0800',title:'ClickHouse 22.1版本新特性盘点',link:decodeURI(location.href),desc:'ClickHouse 22.1版本新特性盘点 作者：Alexey Milovidov 原文链接：https:\/\/clickhouse.com\/blog\/en\/2022\/clickho',owner:'BackendHouse',repo:'BackendHouse\/blog_sources',oauth:{client_id:'a75baa5941ec8d9293bd',client_secret:'f63c9c3e360760ee9200e364ac839d0007cb0af7'}});gitment.render('comments-gitment');</script><noscript>Please enable JavaScript to view the <a href=https://github.com/imsun/gitment>comments powered by gitment.</a></noscript></div></main><footer id=footer class=footer><div class=social-links><a href=http://github.com/%e5%90%8e%e7%ab%af%e4%be%a0 class="iconfont icon-github" title=github></a><a href=https://backendhouse.github.io/index.xml type=application/rss+xml class="iconfont icon-rss" title=rss></a></div><div class=copyright><span class=power-by>由 <a class=hexo-link href=https://gohugo.io>Hugo</a> 强力驱动</span>
+<span class=division>|</span>
+<span class=theme-info>主题 -
+<a class=theme-link href=https://github.com/olOwOlo/hugo-theme-even>Even</a></span>
+<span class=copyright-year>&copy;
+2017 -
+2022<span class=heart><i class="iconfont icon-heart"></i></span><span>后端侠</span></span></div></footer><div class=back-to-top id=back-to-top><i class="iconfont icon-up"></i></div></div><script src="/lib/highlight/highlight.pack.js?v=20171001"></script><script src=https://cdn.jsdelivr.net/npm/jquery@3.2.1/dist/jquery.min.js integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin=anonymous></script><script src=https://cdn.jsdelivr.net/npm/slideout@1.0.1/dist/slideout.min.js integrity="sha256-t+zJ/g8/KXIJMjSVQdnibt4dlaDxc9zXr/9oNPeWqdg=" crossorigin=anonymous></script><script src=https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.js integrity="sha256-XVLffZaxoWfGUEbdzuLi7pwaUJv1cecsQJQqGLe7axY=" crossorigin=anonymous></script><script type=text/javascript src=/js/main.min.c12618f9a600c40bd024996677e951e64d3487006775aeb22e200c990006c5c7.js></script></body></html>

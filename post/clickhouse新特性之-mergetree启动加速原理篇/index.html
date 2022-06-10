@@ -1,0 +1,187 @@
+<!doctype html><html lang=zh-cn><head><meta charset=utf-8><meta http-equiv=x-ua-compatible content="IE=edge,chrome=1"><title>- 后端技术小屋</title><meta name=renderer content="webkit"><meta name=viewport content="width=device-width,initial-scale=1,maximum-scale=1"><meta http-equiv=cache-control content="no-transform"><meta http-equiv=cache-control content="no-siteapp"><meta name=theme-color content="#f8f5ec"><meta name=msapplication-navbutton-color content="#f8f5ec"><meta name=apple-mobile-web-app-capable content="yes"><meta name=apple-mobile-web-app-status-bar-style content="#f8f5ec"><meta name=author content="后端侠"><meta name=description content="[TOC]
+前言 在上篇文章中，我们介绍了clickhouse的新特性——MergeTree启动加速，及其使用方法。本文将介绍MergeTree启动加速的设计原理。
+MergeTree启动原理 part结构 我们知道，在clickhouse中，MergeTree表由一个个part组成。每个part对应一个目录，该目录下有两类文件：元数据文件，数据文件和projection part目录(如果该表创建了projection的话)
+$ ll ./20210321_310_310_0 total 36 -rw-r----- 1 root root 28 Feb 9 14:26 primary.idx -rw-r----- 1 root root 4 Feb 9 14:26 partition.dat -rw-r----- 1 root root 4 Feb 9 14:26 minmax_day.idx -rw-r----- 1 root root 10 Feb 9 14:26 default_compression_codec.txt -rw-r----- 1 root root 1648 Feb 9 14:26 data.mrk3 -rw-r----- 1 root root 2110 Feb 9 14:26 data.bin -rw-r----- 1 root root 1 Feb 9 14:26 count."><meta name=keywords content="Hugo,theme,后端侠"><meta name=generator content="Hugo 0.62.2 with theme even"><link rel=canonical href=https://backendhouse.github.io/post/clickhouse%E6%96%B0%E7%89%B9%E6%80%A7%E4%B9%8B-mergetree%E5%90%AF%E5%8A%A8%E5%8A%A0%E9%80%9F%E5%8E%9F%E7%90%86%E7%AF%87/><link rel=apple-touch-icon sizes=180x180 href=/apple-touch-icon.png><link rel=icon type=image/png sizes=32x32 href=/favicon-32x32.png><link rel=icon type=image/png sizes=16x16 href=/favicon-16x16.png><link rel=manifest href=/manifest.json><link rel=mask-icon href=/safari-pinned-tab.svg color=#5bbad5><link href=/sass/main.min.a2095472a2a8d7ddda1334cf60051cbe40ed55f2467554bb6aa4c17c9bcd27a4.css rel=stylesheet><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.css integrity="sha256-7TyXnr2YU040zfSP+rEcz29ggW4j56/ujTPwjMzyqFY=" crossorigin=anonymous><meta property="og:title" content><meta property="og:description" content="[TOC]
+前言 在上篇文章中，我们介绍了clickhouse的新特性——MergeTree启动加速，及其使用方法。本文将介绍MergeTree启动加速的设计原理。
+MergeTree启动原理 part结构 我们知道，在clickhouse中，MergeTree表由一个个part组成。每个part对应一个目录，该目录下有两类文件：元数据文件，数据文件和projection part目录(如果该表创建了projection的话)
+$ ll ./20210321_310_310_0 total 36 -rw-r----- 1 root root 28 Feb 9 14:26 primary.idx -rw-r----- 1 root root 4 Feb 9 14:26 partition.dat -rw-r----- 1 root root 4 Feb 9 14:26 minmax_day.idx -rw-r----- 1 root root 10 Feb 9 14:26 default_compression_codec.txt -rw-r----- 1 root root 1648 Feb 9 14:26 data.mrk3 -rw-r----- 1 root root 2110 Feb 9 14:26 data.bin -rw-r----- 1 root root 1 Feb 9 14:26 count."><meta property="og:type" content="article"><meta property="og:url" content="https://backendhouse.github.io/post/clickhouse%E6%96%B0%E7%89%B9%E6%80%A7%E4%B9%8B-mergetree%E5%90%AF%E5%8A%A8%E5%8A%A0%E9%80%9F%E5%8E%9F%E7%90%86%E7%AF%87/"><meta itemprop=name content><meta itemprop=description content="[TOC]
+前言 在上篇文章中，我们介绍了clickhouse的新特性——MergeTree启动加速，及其使用方法。本文将介绍MergeTree启动加速的设计原理。
+MergeTree启动原理 part结构 我们知道，在clickhouse中，MergeTree表由一个个part组成。每个part对应一个目录，该目录下有两类文件：元数据文件，数据文件和projection part目录(如果该表创建了projection的话)
+$ ll ./20210321_310_310_0 total 36 -rw-r----- 1 root root 28 Feb 9 14:26 primary.idx -rw-r----- 1 root root 4 Feb 9 14:26 partition.dat -rw-r----- 1 root root 4 Feb 9 14:26 minmax_day.idx -rw-r----- 1 root root 10 Feb 9 14:26 default_compression_codec.txt -rw-r----- 1 root root 1648 Feb 9 14:26 data.mrk3 -rw-r----- 1 root root 2110 Feb 9 14:26 data.bin -rw-r----- 1 root root 1 Feb 9 14:26 count."><meta itemprop=wordCount content="720"><meta itemprop=keywords content><meta name=twitter:card content="summary"><meta name=twitter:title content><meta name=twitter:description content="[TOC]
+前言 在上篇文章中，我们介绍了clickhouse的新特性——MergeTree启动加速，及其使用方法。本文将介绍MergeTree启动加速的设计原理。
+MergeTree启动原理 part结构 我们知道，在clickhouse中，MergeTree表由一个个part组成。每个part对应一个目录，该目录下有两类文件：元数据文件，数据文件和projection part目录(如果该表创建了projection的话)
+$ ll ./20210321_310_310_0 total 36 -rw-r----- 1 root root 28 Feb 9 14:26 primary.idx -rw-r----- 1 root root 4 Feb 9 14:26 partition.dat -rw-r----- 1 root root 4 Feb 9 14:26 minmax_day.idx -rw-r----- 1 root root 10 Feb 9 14:26 default_compression_codec.txt -rw-r----- 1 root root 1648 Feb 9 14:26 data.mrk3 -rw-r----- 1 root root 2110 Feb 9 14:26 data.bin -rw-r----- 1 root root 1 Feb 9 14:26 count."><!--[if lte IE 9]><script src=https://cdnjs.cloudflare.com/ajax/libs/classlist/1.1.20170427/classList.min.js></script><![endif]--><!--[if lt IE 9]><script src=https://cdn.jsdelivr.net/npm/html5shiv@3.7.3/dist/html5shiv.min.js></script><script src=https://cdn.jsdelivr.net/npm/respond.js@1.4.2/dest/respond.min.js></script><![endif]--></head><body><div id=mobile-navbar class=mobile-navbar><div class=mobile-header-logo><a href=/ class=logo>后端技术小屋</a></div><div class=mobile-navbar-icon><span></span><span></span><span></span></div></div><nav id=mobile-menu class="mobile-menu slideout-menu"><ul class=mobile-menu-list><a href=/><li class=mobile-menu-item>Home</li></a><a href=/post/><li class=mobile-menu-item>Archives</li></a><a href=/tags/><li class=mobile-menu-item>Tags</li></a><a href=/categories/><li class=mobile-menu-item>Categories</li></a><a href=/about/><li class=mobile-menu-item>About</li></a></ul></nav><div class=container id=mobile-panel><header id=header class=header><div class=logo-wrapper><a href=/ class=logo>后端技术小屋</a></div><nav class=site-navbar><ul id=menu class=menu><li class=menu-item><a class=menu-item-link href=/>Home</a></li><li class=menu-item><a class=menu-item-link href=/post/>Archives</a></li><li class=menu-item><a class=menu-item-link href=/tags/>Tags</a></li><li class=menu-item><a class=menu-item-link href=/categories/>Categories</a></li><li class=menu-item><a class=menu-item-link href=/about/>About</a></li></ul></nav></header><main id=main class=main><div class=content-wrapper><div id=content class=content><article class=post><header class=post-header><h1 class=post-title></h1><div class=post-meta><span class=post-time>0001-01-01</span></div></header><div class=post-toc id=post-toc><h2 class=post-toc-title>文章目录</h2><div class="post-toc-content always-active"><nav id=TableOfContents><ul><li><a href=#前言>前言</a></li><li><a href=#mergetree启动原理>MergeTree启动原理</a><ul><li><a href=#part结构>part结构</a></li><li><a href=#启动流程>启动流程</a></li><li><a href=#为什么慢>为什么慢</a></li></ul></li><li><a href=#启动加速优化>启动加速优化</a><ul><li><a href=#优化方案>优化方案</a><ul><li><a href=#缓存结构>缓存结构</a></li><li><a href=#缓存一致性>缓存一致性</a></li></ul></li><li><a href=#源码走读>源码走读</a></li></ul></li><li><a href=#总结>总结</a></li></ul></nav></div></div><div class=post-content><p>[TOC]</p><h1 id=前言>前言</h1><p>在上篇文章中，我们介绍了clickhouse的新特性——MergeTree启动加速，及其使用方法。本文将介绍MergeTree启动加速的设计原理。</p><h1 id=mergetree启动原理>MergeTree启动原理</h1><h2 id=part结构>part结构</h2><p>我们知道，在clickhouse中，MergeTree表由一个个part组成。每个part对应一个目录，该目录下有两类文件：元数据文件，数据文件和projection part目录(如果该表创建了projection的话)</p><div class=highlight><pre style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash>$ ll ./20210321_310_310_0 
+total <span style=color:#bd93f9>36</span>
+-rw-r----- <span style=color:#bd93f9>1</span> root root   <span style=color:#bd93f9>28</span> Feb  <span style=color:#bd93f9>9</span> 14:26 primary.idx
+-rw-r----- <span style=color:#bd93f9>1</span> root root    <span style=color:#bd93f9>4</span> Feb  <span style=color:#bd93f9>9</span> 14:26 partition.dat
+-rw-r----- <span style=color:#bd93f9>1</span> root root    <span style=color:#bd93f9>4</span> Feb  <span style=color:#bd93f9>9</span> 14:26 minmax_day.idx
+-rw-r----- <span style=color:#bd93f9>1</span> root root   <span style=color:#bd93f9>10</span> Feb  <span style=color:#bd93f9>9</span> 14:26 default_compression_codec.txt
+-rw-r----- <span style=color:#bd93f9>1</span> root root <span style=color:#bd93f9>1648</span> Feb  <span style=color:#bd93f9>9</span> 14:26 data.mrk3
+-rw-r----- <span style=color:#bd93f9>1</span> root root <span style=color:#bd93f9>2110</span> Feb  <span style=color:#bd93f9>9</span> 14:26 data.bin
+-rw-r----- <span style=color:#bd93f9>1</span> root root    <span style=color:#bd93f9>1</span> Feb  <span style=color:#bd93f9>9</span> 14:26 count.txt
+-rw-r----- <span style=color:#bd93f9>1</span> root root  <span style=color:#bd93f9>790</span> Feb  <span style=color:#bd93f9>9</span> 14:26 columns.txt
+-rw-r----- <span style=color:#bd93f9>1</span> root root  <span style=color:#bd93f9>252</span> Feb  <span style=color:#bd93f9>9</span> 14:26 checksums.txt
+</code></pre></div><p>其中元数据文件包括：</p><ul><li>partition.dat: 记录本part所在分区的值</li><li>primary.idx: 主键索引文件，记录每个Granule起始行的主键值，需配合.mrk3文件使用</li><li>count.txt: 记录本part的数据行数</li><li>checksums.txt: 记录本part下所有文件的size和checksum</li><li>minmax_XX.idx: 分区索引或二级minmax索引文件，记录对应字段的min值和max值</li><li>default_compression_codec.txt: 记录该part默认的压缩编码，如ZTSD, LZ4等</li><li>*.mrk, *.mrk2, *.mrk3: 不同版本的mark文件，它记录着每个Granule的起始行数、在对应的数据文件中的偏移位置和解压后的Block中的偏移位置。</li><li>uuid.txt: 记录本part的唯一id。仅在assign_part_uuids = true时才会出现。</li><li>ttl.txt: 记录本part的过期时间</li></ul><p>其中数据文件包括：</p><ul><li>XX.bin。part有三种类型，Wide, Compact, InMemory。当part类型为Wide时，每个字段对应一个bin文件和mark文件。当part类型为Compact时，part目录下仅有一个全局的data.bin和data.mrk3文件。当part类型为InMemory时，没有part目录，只有一个全局的wal.bin文件，因此InMemory Part对启动性能的影响很小，不在我们考虑范围之内。</li></ul><h2 id=启动流程>启动流程</h2><p>clickhouse-server启动之后：</p><ul><li>首先加载系统库(包括system/information_schema/INFORMATION_SCHEMA)的元数据，然后attach系统库下的表。</li><li>然后调用loadMetadata加载除了系统库之外的database</li><li>最后创建HTTP、TCP等server，提供对外查询</li></ul><p>系统库中表的数量有限，主要是第二步比较耗时</p><div class=highlight><pre style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cpp data-lang=cpp>    <span style=color:#ff79c6>try</span>
+    {
+        <span style=color:#ff79c6>auto</span> <span style=color:#ff79c6>&amp;</span> database_catalog <span style=color:#ff79c6>=</span> DatabaseCatalog<span style=color:#ff79c6>:</span><span style=color:#ff79c6>:</span>instance();
+        <span style=color:#6272a4>/// We load temporary database first, because projections need it.
+</span><span style=color:#6272a4></span>        database_catalog.initializeAndLoadTemporaryDatabase();
+        loadMetadataSystem(global_context);
+        <span style=color:#6272a4>/// After attaching system databases we can initialize system log.
+</span><span style=color:#6272a4></span>        global_context<span style=color:#ff79c6>-</span><span style=color:#ff79c6>&gt;</span>initializeSystemLogs();
+        global_context<span style=color:#ff79c6>-</span><span style=color:#ff79c6>&gt;</span>setSystemZooKeeperLogAfterInitializationIfNeeded();
+        <span style=color:#6272a4>/// After the system database is created, attach virtual system tables (in addition to query_log and part_log)
+</span><span style=color:#6272a4></span>        attachSystemTablesServer(global_context, <span style=color:#ff79c6>*</span>database_catalog.getSystemDatabase(), has_zookeeper);
+        attachInformationSchema(global_context, <span style=color:#ff79c6>*</span>database_catalog.getDatabase(DatabaseCatalog<span style=color:#ff79c6>:</span><span style=color:#ff79c6>:</span>INFORMATION_SCHEMA));
+        attachInformationSchema(global_context, <span style=color:#ff79c6>*</span>database_catalog.getDatabase(DatabaseCatalog<span style=color:#ff79c6>:</span><span style=color:#ff79c6>:</span>INFORMATION_SCHEMA_UPPERCASE));
+        <span style=color:#6272a4>/// Firstly remove partially dropped databases, to avoid race with MaterializedMySQLSyncThread,
+</span><span style=color:#6272a4></span>        <span style=color:#6272a4>/// that may execute DROP before loadMarkedAsDroppedTables() in background,
+</span><span style=color:#6272a4></span>        <span style=color:#6272a4>/// and so loadMarkedAsDroppedTables() will find it and try to add, and UUID will overlap.
+</span><span style=color:#6272a4></span>        database_catalog.loadMarkedAsDroppedTables();
+        <span style=color:#6272a4>/// Then, load remaining databases
+</span><span style=color:#6272a4></span>        loadMetadata(global_context, default_database);
+        startupSystemTables();
+        database_catalog.loadDatabases();
+        <span style=color:#6272a4>/// After loading validate that default database exists
+</span><span style=color:#6272a4></span>        database_catalog.assertDatabaseExists(default_database);
+    }
+
+	...
+    {
+        attachSystemTablesAsync(global_context, <span style=color:#ff79c6>*</span>DatabaseCatalog<span style=color:#ff79c6>:</span><span style=color:#ff79c6>:</span>instance().getSystemDatabase(), async_metrics);
+
+        {
+            std<span style=color:#ff79c6>:</span><span style=color:#ff79c6>:</span>lock_guard lock(servers_lock);
+            createServers(config(), listen_hosts, listen_try, server_pool, async_metrics, servers);
+            <span style=color:#ff79c6>if</span> (servers.empty())
+                <span style=color:#ff79c6>throw</span> Exception(
+                    <span style=color:#f1fa8c></span><span style=color:#f1fa8c>&#34;</span><span style=color:#f1fa8c>No servers started (add valid listen_host and &#39;tcp_port&#39; or &#39;http_port&#39; to configuration file.)</span><span style=color:#f1fa8c>&#34;</span>,
+                    ErrorCodes<span style=color:#ff79c6>:</span><span style=color:#ff79c6>:</span>NO_ELEMENTS_IN_CONFIG);
+        }
+
+        <span style=color:#ff79c6>if</span> (servers.empty())
+             <span style=color:#ff79c6>throw</span> Exception(<span style=color:#f1fa8c></span><span style=color:#f1fa8c>&#34;</span><span style=color:#f1fa8c>No servers started (add valid listen_host and &#39;tcp_port&#39; or &#39;http_port&#39; to configuration file.)</span><span style=color:#f1fa8c>&#34;</span>,
+                ErrorCodes<span style=color:#ff79c6>:</span><span style=color:#ff79c6>:</span>NO_ELEMENTS_IN_CONFIG);
+</code></pre></div><p>在<code>loadMetadata</code>中，</p><ul><li>首先遍历metadata目录，获取每个database的名称和元数据路径</li><li>对于每个database，加载对应的<database>.sql文件，获取create database query并执行, 并将该database加入到catalog中</li><li>执行<code>TablesLoader::loadTables</code>，对每个database对象执行<code>loadStoredObjects</code>，即完成该database下每个table的加载。对于Engine为MergeTree Family的表来说，加载的主要工作就是读取所有part下的元数据文件到内存中。</li><li>执行<code>TablesLoader::startupTables</code>，对每个database对象执行<code>startupTables</code>。对于非Replicated的MergeTree Family表，启动包括清理过期part、清理过期WAL、清理空part、启动后台disk move任务(如果该表配置了多disk的话)等工作。对于Replicated的MergeTree Family表，启动包括开启副本间同步、副本选主、启用副本、启动后台disk move等工作</li></ul><div class=highlight><pre style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cpp data-lang=cpp><span style=color:#8be9fd>void</span> <span style=color:#50fa7b>loadMetadata</span>(ContextMutablePtr context, <span style=color:#ff79c6>const</span> String <span style=color:#ff79c6>&amp;</span> default_database_name)
+{
+    ...
+    <span style=color:#ff79c6>for</span> (fs<span style=color:#ff79c6>:</span><span style=color:#ff79c6>:</span>directory_iterator it(path); it <span style=color:#ff79c6>!</span><span style=color:#ff79c6>=</span> dir_end; <span style=color:#ff79c6>+</span><span style=color:#ff79c6>+</span>it)
+    {
+        <span style=color:#ff79c6>if</span> (it<span style=color:#ff79c6>-</span><span style=color:#ff79c6>&gt;</span>is_symlink())
+            <span style=color:#ff79c6>continue</span>;
+
+        <span style=color:#ff79c6>const</span> <span style=color:#ff79c6>auto</span> current_file <span style=color:#ff79c6>=</span> it<span style=color:#ff79c6>-</span><span style=color:#ff79c6>&gt;</span>path().filename().string();
+        <span style=color:#ff79c6>if</span> (<span style=color:#ff79c6>!</span>it<span style=color:#ff79c6>-</span><span style=color:#ff79c6>&gt;</span>is_directory())
+        {
+            <span style=color:#6272a4>/// TODO: DETACH DATABASE PERMANENTLY ?
+</span><span style=color:#6272a4></span>            <span style=color:#ff79c6>if</span> (fs<span style=color:#ff79c6>:</span><span style=color:#ff79c6>:</span>path(current_file).extension() <span style=color:#ff79c6>=</span><span style=color:#ff79c6>=</span> <span style=color:#f1fa8c></span><span style=color:#f1fa8c>&#34;</span><span style=color:#f1fa8c>.sql</span><span style=color:#f1fa8c>&#34;</span>)
+            {
+                String db_name <span style=color:#ff79c6>=</span> fs<span style=color:#ff79c6>:</span><span style=color:#ff79c6>:</span>path(current_file).stem();
+                <span style=color:#ff79c6>if</span> (<span style=color:#ff79c6>!</span>isSystemOrInformationSchema(db_name))
+                    databases.emplace(unescapeForFileName(db_name), fs<span style=color:#ff79c6>:</span><span style=color:#ff79c6>:</span>path(path) <span style=color:#ff79c6>/</span> db_name);
+            }
+            
+    ...
+    TablesLoader<span style=color:#ff79c6>:</span><span style=color:#ff79c6>:</span>Databases loaded_databases;
+    <span style=color:#ff79c6>for</span> (<span style=color:#ff79c6>const</span> <span style=color:#ff79c6>auto</span> <span style=color:#ff79c6>&amp;</span> [name, db_path] <span style=color:#ff79c6>:</span> databases)
+    {
+        loadDatabase(context, name, db_path, has_force_restore_data_flag);
+        loaded_databases.insert({name, DatabaseCatalog<span style=color:#ff79c6>:</span><span style=color:#ff79c6>:</span>instance().getDatabase(name)});
+    }
+
+    TablesLoader loader{context, std<span style=color:#ff79c6>:</span><span style=color:#ff79c6>:</span>move(loaded_databases), has_force_restore_data_flag, <span style=color:#6272a4>/* force_attach */</span> <span style=color:#8be9fd;font-style:italic>true</span>};
+    loader.loadTables();
+    loader.startupTables();
+    ...
+}
+</code></pre></div><p>在<code>DatabaseOrdinary::loadStoredObjects</code>中</p><ul><li>首先遍历database目录是下所有*.sql文件。对于每个文件，读取其中的建表语句并解析成AST</li><li>对于该database目录下的每张表，生成对应的Storage对象，并attach到本database中。注意这个过程以表为最小粒度并发的，并发度等于cpu物理核数</li></ul><div class=highlight><pre style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cpp data-lang=cpp><span style=color:#8be9fd>void</span> DatabaseOrdinary<span style=color:#ff79c6>:</span><span style=color:#ff79c6>:</span>loadStoredObjects(
+    ContextMutablePtr local_context, <span style=color:#8be9fd>bool</span> force_restore, <span style=color:#8be9fd>bool</span> force_attach, <span style=color:#8be9fd>bool</span> skip_startup_tables)
+{
+    <span style=color:#6272a4>/** Tables load faster if they are loaded in sorted (by name) order.
+</span><span style=color:#6272a4>      * Otherwise (for the ext4 filesystem), `DirectoryIterator` iterates through them in some order,
+</span><span style=color:#6272a4>      *  which does not correspond to order tables creation and does not correspond to order of their location on disk.
+</span><span style=color:#6272a4>      */</span>
+
+    ParsedTablesMetadata metadata;
+    loadTablesMetadata(local_context, metadata);
+    ...
+    
+    <span style=color:#6272a4>/// Attach tables.
+</span><span style=color:#6272a4></span>    <span style=color:#ff79c6>for</span> (<span style=color:#ff79c6>const</span> <span style=color:#ff79c6>auto</span> <span style=color:#ff79c6>&amp;</span> <span style=color:#8be9fd;font-style:italic>name_with_path_and_query</span> : metadata.parsed_tables)
+    {
+        <span style=color:#ff79c6>const</span> <span style=color:#ff79c6>auto</span> <span style=color:#ff79c6>&amp;</span> name <span style=color:#ff79c6>=</span> name_with_path_and_query.first;
+        <span style=color:#ff79c6>const</span> <span style=color:#ff79c6>auto</span> <span style=color:#ff79c6>&amp;</span> path <span style=color:#ff79c6>=</span> name_with_path_and_query.second.path;
+        <span style=color:#ff79c6>const</span> <span style=color:#ff79c6>auto</span> <span style=color:#ff79c6>&amp;</span> ast <span style=color:#ff79c6>=</span> name_with_path_and_query.second.ast;
+        <span style=color:#ff79c6>const</span> <span style=color:#ff79c6>auto</span> <span style=color:#ff79c6>&amp;</span> create_query <span style=color:#ff79c6>=</span> ast<span style=color:#ff79c6>-</span><span style=color:#ff79c6>&gt;</span>as<span style=color:#ff79c6>&lt;</span><span style=color:#ff79c6>const</span> ASTCreateQuery <span style=color:#ff79c6>&amp;</span><span style=color:#ff79c6>&gt;</span>();
+
+        <span style=color:#ff79c6>if</span> (<span style=color:#ff79c6>!</span>create_query.is_dictionary)
+        {
+            pool.scheduleOrThrowOnError([<span style=color:#ff79c6>&amp;</span>]()
+            {
+                loadTableFromMetadata(local_context, path, name, ast, force_restore);
+
+                <span style=color:#6272a4>/// Messages, so that it&#39;s not boring to wait for the server to load for a long time.
+</span><span style=color:#6272a4></span>                logAboutProgress(log, <span style=color:#ff79c6>+</span><span style=color:#ff79c6>+</span>tables_processed, total_tables, watch);
+            });
+        }
+    }
+
+    pool.wait();
+    ...
+}
+</code></pre></div><p>那么MergeTree表加载元数据的操作发生在哪里呢？发生在Storage的构造函数中，参考<code>StorageReplicatedMergeTree::StorageReplicatedMergeTree</code> -> <code>MergeTreeData::loadDataParts</code>。在<code>loadDataParts</code>中</p><ul><li><p>首先遍历每一个disk下的表的数据目录，收集其中的part。注意这个过程是并行的，并行度为本表关联的disk数量。</p><ul><li>对于InMemory part, 加载wal文件中的数据。</li><li>对于Wide或Compact part，记录part名到disk的映射关系。</li></ul></li><li><p>然后加载Wide和Compact part。<code>loadDataPartsFromDisk</code></p></li><li><p>最后加载InMemory part. <code>loadDataPartsFromWAL</code></p></li></ul><div class=highlight><pre style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cpp data-lang=cpp><span style=color:#8be9fd>void</span> MergeTreeData<span style=color:#ff79c6>:</span><span style=color:#ff79c6>:</span>loadDataParts(<span style=color:#8be9fd>bool</span> skip_sanity_checks)
+{
+	...
+    <span style=color:#ff79c6>for</span> (<span style=color:#ff79c6>const</span> <span style=color:#ff79c6>auto</span> <span style=color:#ff79c6>&amp;</span> <span style=color:#8be9fd;font-style:italic>disk_ptr</span> : disks)
+    {
+        <span style=color:#ff79c6>if</span> (disk_ptr<span style=color:#ff79c6>-</span><span style=color:#ff79c6>&gt;</span>isBroken())
+            <span style=color:#ff79c6>continue</span>;
+
+        <span style=color:#ff79c6>auto</span> <span style=color:#ff79c6>&amp;</span> disk_parts <span style=color:#ff79c6>=</span> disk_part_map[disk_ptr<span style=color:#ff79c6>-</span><span style=color:#ff79c6>&gt;</span>getName()];
+        <span style=color:#ff79c6>auto</span> <span style=color:#ff79c6>&amp;</span> disk_wal_parts <span style=color:#ff79c6>=</span> disk_wal_part_map[disk_ptr<span style=color:#ff79c6>-</span><span style=color:#ff79c6>&gt;</span>getName()];
+
+        pool.scheduleOrThrowOnError([<span style=color:#ff79c6>&amp;</span>, disk_ptr]()
+        {
+            <span style=color:#ff79c6>for</span> (<span style=color:#ff79c6>auto</span> it <span style=color:#ff79c6>=</span> disk_ptr<span style=color:#ff79c6>-</span><span style=color:#ff79c6>&gt;</span>iterateDirectory(relative_data_path); it<span style=color:#ff79c6>-</span><span style=color:#ff79c6>&gt;</span>isValid(); it<span style=color:#ff79c6>-</span><span style=color:#ff79c6>&gt;</span>next())
+            {
+                <span style=color:#6272a4>/// Skip temporary directories, file &#39;format_version.txt&#39; and directory &#39;detached&#39;.
+</span><span style=color:#6272a4></span>                <span style=color:#ff79c6>if</span> (startsWith(it<span style=color:#ff79c6>-</span><span style=color:#ff79c6>&gt;</span>name(), <span style=color:#f1fa8c></span><span style=color:#f1fa8c>&#34;</span><span style=color:#f1fa8c>tmp</span><span style=color:#f1fa8c>&#34;</span>) <span style=color:#ff79c6>|</span><span style=color:#ff79c6>|</span> it<span style=color:#ff79c6>-</span><span style=color:#ff79c6>&gt;</span>name() <span style=color:#ff79c6>=</span><span style=color:#ff79c6>=</span> MergeTreeData<span style=color:#ff79c6>:</span><span style=color:#ff79c6>:</span>FORMAT_VERSION_FILE_NAME
+                    <span style=color:#ff79c6>|</span><span style=color:#ff79c6>|</span> it<span style=color:#ff79c6>-</span><span style=color:#ff79c6>&gt;</span>name() <span style=color:#ff79c6>=</span><span style=color:#ff79c6>=</span> MergeTreeData<span style=color:#ff79c6>:</span><span style=color:#ff79c6>:</span>DETACHED_DIR_NAME)
+                    <span style=color:#ff79c6>continue</span>;
+
+                <span style=color:#ff79c6>if</span> (<span style=color:#ff79c6>!</span>startsWith(it<span style=color:#ff79c6>-</span><span style=color:#ff79c6>&gt;</span>name(), MergeTreeWriteAheadLog<span style=color:#ff79c6>:</span><span style=color:#ff79c6>:</span>WAL_FILE_NAME))
+                    disk_parts.emplace_back(std<span style=color:#ff79c6>:</span><span style=color:#ff79c6>:</span>make_pair(it<span style=color:#ff79c6>-</span><span style=color:#ff79c6>&gt;</span>name(), disk_ptr));
+                <span style=color:#ff79c6>else</span> <span style=color:#50fa7b>if</span> (it<span style=color:#ff79c6>-</span><span style=color:#ff79c6>&gt;</span>name() <span style=color:#ff79c6>=</span><span style=color:#ff79c6>=</span> MergeTreeWriteAheadLog<span style=color:#ff79c6>:</span><span style=color:#ff79c6>:</span>DEFAULT_WAL_FILE_NAME <span style=color:#ff79c6>&amp;</span><span style=color:#ff79c6>&amp;</span> settings<span style=color:#ff79c6>-</span><span style=color:#ff79c6>&gt;</span>in_memory_parts_enable_wal)
+                {
+                    std<span style=color:#ff79c6>:</span><span style=color:#ff79c6>:</span>unique_lock lock(wal_init_lock);
+                    <span style=color:#ff79c6>if</span> (write_ahead_log <span style=color:#ff79c6>!</span><span style=color:#ff79c6>=</span> <span style=color:#ff79c6>nullptr</span>)
+                        <span style=color:#ff79c6>throw</span> Exception(
+                            <span style=color:#f1fa8c></span><span style=color:#f1fa8c>&#34;</span><span style=color:#f1fa8c>There are multiple WAL files appeared in current storage policy. You need to resolve this manually</span><span style=color:#f1fa8c>&#34;</span>,
+                            ErrorCodes<span style=color:#ff79c6>:</span><span style=color:#ff79c6>:</span>CORRUPTED_DATA);
+
+                    write_ahead_log <span style=color:#ff79c6>=</span> std<span style=color:#ff79c6>:</span><span style=color:#ff79c6>:</span>make_shared<span style=color:#ff79c6>&lt;</span>MergeTreeWriteAheadLog<span style=color:#ff79c6>&gt;</span>(<span style=color:#ff79c6>*</span><span style=color:#ff79c6>this</span>, disk_ptr, it<span style=color:#ff79c6>-</span><span style=color:#ff79c6>&gt;</span>name());
+                    <span style=color:#ff79c6>for</span> (<span style=color:#ff79c6>auto</span> <span style=color:#ff79c6>&amp;</span><span style=color:#ff79c6>&amp;</span> <span style=color:#8be9fd;font-style:italic>part</span> : write_ahead_log<span style=color:#ff79c6>-</span><span style=color:#ff79c6>&gt;</span>restore(metadata_snapshot, getContext()))
+                        disk_wal_parts.push_back(std<span style=color:#ff79c6>:</span><span style=color:#ff79c6>:</span>move(part));
+                }
+                
+    ...
+    <span style=color:#ff79c6>if</span> (num_parts <span style=color:#ff79c6>&gt;</span> <span style=color:#bd93f9>0</span>)
+        loadDataPartsFromDisk(
+            broken_parts_to_detach, duplicate_parts_to_remove, pool, num_parts, parts_queue, skip_sanity_checks, settings);
+
+    <span style=color:#ff79c6>if</span> (<span style=color:#ff79c6>!</span>parts_from_wal.empty())
+        loadDataPartsFromWAL(broken_parts_to_detach, duplicate_parts_to_remove, parts_from_wal, part_lock);
+}
+</code></pre></div><p>一个MergeTree表的In memory是相当有限的，我们重点分析Wide和Compact part的加载，即<code>loadDataPartsFromDisk</code>。每个part的加载流程如下：</p><ul><li>加载uuid.txt文件</li><li>加载columns.txt文件</li><li>加载checksums.txt文件</li><li>加载任意mark文件。对于Compact part，只有一个mark文件：data.mrk3</li><li>从checksums中获取每个column和secondary index文件的大小。</li><li>加载primary.idx文件</li><li>加载ttl.txt文件</li><li>加载projection parts中的metadata文件。</li><li>根据checksums校验metadata和data文件的一致性</li><li>加载default_compression_codec.txt文件</li></ul><p>注意MergeTree表加载part的过程是并行的，并发度默认为cpu硬件核数。当MergeTree表完成所有part的加载后，便可利用元数据构造的分区索引、主键索引、二级索引、Projection加速查询。这就是为什么clickhouse-server必须等待所有表完成加载后才可对外提供查询服务的原因。</p><h2 id=为什么慢>为什么慢</h2><p>从上面的流程可以看到，加载一个MergeTree part最多读取8个metadata 文件。假如clickhouse示例上有70w part, metadata文件的数量为560w。如果MergeTree还创建了一个或多个projection, metadata文件数量可能会超过1000w。对这么多文件的并发读取会瞬间把disk ioutil打满，disk read成为性能瓶颈。这就是为什么MergeTree启动慢的原因。</p><h1 id=启动加速优化>启动加速优化</h1><h2 id=优化方案>优化方案</h2><p>优化的核心在于减少disk io次数。因此我们决定引入RocksDB用于缓存metadata file。RocksDB启动之后会自身的LSM文件，文件个数远远少于metadata文件数，文件位置在磁盘上也更加集中。当所有part的metadata都缓存到RocksDB时，clickhouse启动时仅从RocksDB中就可获得所有part的metadata，总体来看disk io的次数大大减小了。</p><h3 id=缓存结构>缓存结构</h3><p>RocksDB中：</p><ul><li>key: 考虑到同一张表的part可能分布在不同的disk中，所以key由两部分组成，disk name和part相对disk的路径，如<code>default:store/b47/b47ee9c8-afa1-41ac-adfb-2e0dc42de819/6_7_7_0/primary.idx</code></li><li>value: metadata文件的内容</li></ul><h3 id=缓存一致性>缓存一致性</h3><p><img src=C:\workspace\blog_sources\static\images\image-20220519145315220.png alt=image-20220519145315220 style=zoom:50%></p><p>既然用RockDB作为缓存层，那么如何保证缓存层和持久化层也就是磁盘文件的一致性呢？主要分为两大类场景：</p><ul><li>读meta：当需要读取某个part的元数据时，首先从缓存层查询，如果缓存未命中, 则读取持久化层的结果，并将该结果更新到缓存层并返回结果。如果缓存命中则直接返回结果。该操作主要发生在clickhouse-server启动阶段</li><li>写meta：当需要更新某个part的元数据时，对缓存层和持久化层进行双写。该操作可能发生在插入数据、删除分区、后台数据合并/移动、ALTER TABLE等场景下。</li></ul><p>那么是否需要考虑缓存的并发问题呢？ 一个cache key唯一对应一个metadata文件，而clickhouse MergeTree的设计已经保证了不可能有多写或读写并发的情况出现。因此在设计缓存层时无需考虑这个问题。</p><h4 id=如何检测不一致>如何检测不一致</h4><p>增加了一层缓存层，那么</p><h2 id=源码走读>源码走读</h2><h1 id=总结>总结</h1></div><div class=post-copyright><p class=copyright-item><span class=item-title>文章作者</span>
+<span class=item-content>后端侠</span></p><p class=copyright-item><span class=item-title>上次更新</span>
+<span class=item-content>0001-01-01</span></p></div><footer class=post-footer><nav class=post-nav><a class=prev href=/post/stl%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90-%E5%86%85%E5%AD%98%E5%88%86%E9%85%8D/><i class="iconfont icon-left"></i><span class="prev-text nav-default">STL源码分析--内存分配</span>
+<span class="prev-text nav-mobile">上一篇</span></a>
+<a class=next href=/post/optimizing-software-in-c++%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0%E4%B8%80-the-efficiency-of-different-c++-constructs-/><span class="next-text nav-default"></span><span class="next-text nav-mobile">下一篇</span>
+<i class="iconfont icon-right"></i></a></nav></footer></article></div><script src=https://utteranc.es/client.js repo=BackendHouse/hugo-comment issue-term=pathname theme=github-light crossorigin=anonymous async></script><noscript>Please enable JavaScript to view the <a href=https://github.com/utterance>comments powered by utterances.</a></noscript></div></main><footer id=footer class=footer><div class=social-links><a href=http://github.com/%e5%90%8e%e7%ab%af%e4%be%a0 class="iconfont icon-github" title=github></a><a href=https://backendhouse.github.io/index.xml type=application/rss+xml class="iconfont icon-rss" title=rss></a></div><div class=copyright><span class=power-by>由 <a class=hexo-link href=https://gohugo.io>Hugo</a> 强力驱动</span>
+<span class=division>|</span>
+<span class=theme-info>主题 -
+<a class=theme-link href=https://github.com/olOwOlo/hugo-theme-even>Even</a></span>
+<span class=copyright-year>&copy;
+2020 -
+2022<span class=heart><i class="iconfont icon-heart"></i></span><span>后端侠</span></span></div></footer><div class=back-to-top id=back-to-top><i class="iconfont icon-up"></i></div></div><script src="/lib/highlight/highlight.pack.js?v=20171001"></script><script src=https://cdn.jsdelivr.net/npm/jquery@3.2.1/dist/jquery.min.js integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin=anonymous></script><script src=https://cdn.jsdelivr.net/npm/slideout@1.0.1/dist/slideout.min.js integrity="sha256-t+zJ/g8/KXIJMjSVQdnibt4dlaDxc9zXr/9oNPeWqdg=" crossorigin=anonymous></script><script src=https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.js integrity="sha256-XVLffZaxoWfGUEbdzuLi7pwaUJv1cecsQJQqGLe7axY=" crossorigin=anonymous></script><script type=text/javascript src=/js/main.min.c12618f9a600c40bd024996677e951e64d3487006775aeb22e200c990006c5c7.js></script><script async src="https://www.googletagmanager.com/gtag/js?id=G-SYKLLYTW9K"></script><script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}
+gtag('js',new Date());gtag('config','G-SYKLLYTW9K');</script></body></html>

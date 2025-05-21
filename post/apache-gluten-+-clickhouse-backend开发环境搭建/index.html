@@ -1,0 +1,209 @@
+<!doctype html><html lang=zh-cn><head><meta charset=utf-8><meta http-equiv=x-ua-compatible content="IE=edge,chrome=1"><title>无GUI的Linux Server配置vtune-gui教程 - 后端技术小屋</title><meta name=renderer content="webkit"><meta name=viewport content="width=device-width,initial-scale=1,maximum-scale=1"><meta http-equiv=cache-control content="no-transform"><meta http-equiv=cache-control content="no-siteapp"><meta name=theme-color content="#f8f5ec"><meta name=msapplication-navbutton-color content="#f8f5ec"><meta name=apple-mobile-web-app-capable content="yes"><meta name=apple-mobile-web-app-status-bar-style content="#f8f5ec"><meta name=author content="后端侠"><meta name=description content="代码编译 环境 arch: 建议x86-64 system: 推荐ubuntu20或22版本 compiler: clang 19 cmake: 至少3.20 因为gluten需要和ClickHouse一块编译，因此首"><meta name=keywords content="Hugo,theme,后端侠"><meta name=generator content="Hugo 0.62.2 with theme even"><link rel=canonical href=https://backendhouse.github.io/post/apache-gluten-+-clickhouse-backend%E5%BC%80%E5%8F%91%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA/><link rel=apple-touch-icon sizes=180x180 href=/apple-touch-icon.png><link rel=icon type=image/png sizes=32x32 href=/favicon-32x32.png><link rel=icon type=image/png sizes=16x16 href=/favicon-16x16.png><link rel=manifest href=/manifest.json><link rel=mask-icon href=/safari-pinned-tab.svg color=#5bbad5><link href=/sass/main.min.a2095472a2a8d7ddda1334cf60051cbe40ed55f2467554bb6aa4c17c9bcd27a4.css rel=stylesheet><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.css integrity="sha256-7TyXnr2YU040zfSP+rEcz29ggW4j56/ujTPwjMzyqFY=" crossorigin=anonymous><meta property="og:title" content="无GUI的Linux Server配置vtune-gui教程"><meta property="og:description" content="代码编译 环境 arch: 建议x86-64 system: 推荐ubuntu20或22版本 compiler: clang 19 cmake: 至少3.20 因为gluten需要和ClickHouse一块编译，因此首"><meta property="og:type" content="article"><meta property="og:url" content="https://backendhouse.github.io/post/apache-gluten-+-clickhouse-backend%E5%BC%80%E5%8F%91%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA/"><meta property="article:published_time" content="2025-05-21T09:24:05+08:00"><meta property="article:modified_time" content="2025-05-21T09:24:05+08:00"><meta itemprop=name content="无GUI的Linux Server配置vtune-gui教程"><meta itemprop=description content="代码编译 环境 arch: 建议x86-64 system: 推荐ubuntu20或22版本 compiler: clang 19 cmake: 至少3.20 因为gluten需要和ClickHouse一块编译，因此首"><meta itemprop=datePublished content="2025-05-21T09:24:05+08:00"><meta itemprop=dateModified content="2025-05-21T09:24:05+08:00"><meta itemprop=wordCount content="1939"><meta itemprop=keywords content="性能优化,vtune,"><meta name=twitter:card content="summary"><meta name=twitter:title content="无GUI的Linux Server配置vtune-gui教程"><meta name=twitter:description content="代码编译 环境 arch: 建议x86-64 system: 推荐ubuntu20或22版本 compiler: clang 19 cmake: 至少3.20 因为gluten需要和ClickHouse一块编译，因此首"><!--[if lte IE 9]><script src=https://cdnjs.cloudflare.com/ajax/libs/classlist/1.1.20170427/classList.min.js></script><![endif]--><!--[if lt IE 9]><script src=https://cdn.jsdelivr.net/npm/html5shiv@3.7.3/dist/html5shiv.min.js></script><script src=https://cdn.jsdelivr.net/npm/respond.js@1.4.2/dest/respond.min.js></script><![endif]--></head><body><div id=mobile-navbar class=mobile-navbar><div class=mobile-header-logo><a href=/ class=logo>后端技术小屋</a></div><div class=mobile-navbar-icon><span></span><span></span><span></span></div></div><nav id=mobile-menu class="mobile-menu slideout-menu"><ul class=mobile-menu-list><a href=/><li class=mobile-menu-item>Home</li></a><a href=/post/><li class=mobile-menu-item>Archives</li></a><a href=/tags/><li class=mobile-menu-item>Tags</li></a><a href=/categories/><li class=mobile-menu-item>Categories</li></a><a href=/about/><li class=mobile-menu-item>About</li></a></ul></nav><div class=container id=mobile-panel><header id=header class=header><div class=logo-wrapper><a href=/ class=logo>后端技术小屋</a></div><nav class=site-navbar><ul id=menu class=menu><li class=menu-item><a class=menu-item-link href=/>Home</a></li><li class=menu-item><a class=menu-item-link href=/post/>Archives</a></li><li class=menu-item><a class=menu-item-link href=/tags/>Tags</a></li><li class=menu-item><a class=menu-item-link href=/categories/>Categories</a></li><li class=menu-item><a class=menu-item-link href=/about/>About</a></li></ul></nav></header><main id=main class=main><div class=content-wrapper><div id=content class=content><article class=post><header class=post-header><h1 class=post-title>无GUI的Linux Server配置vtune-gui教程</h1><div class=post-meta><span class=post-time>2025-05-21</span><div class=post-category><a href=/categories/linux/>linux</a></div></div></header><div class=post-toc id=post-toc><h2 class=post-toc-title>文章目录</h2><div class="post-toc-content always-active"><nav id=TableOfContents><ul><li><a href=#代码编译>代码编译</a><ul><li><a href=#环境>环境</a></li><li><a href=#编译gluten>编译Gluten</a></li><li><a href=#编译clickhouse>编译ClickHouse</a></li></ul></li><li><a href=#开发环境配置>开发环境配置</a><ul><li><a href=#clickhouse>ClickHouse</a></li><li><a href=#gluten>Gluten</a></li></ul></li><li><a href=#测试>测试</a><ul><li><a href=#gluten-1>Gluten</a><ul><li><a href=#手动单测>手动单测</a></li><li><a href=#idea单测>IDEA单测</a></li></ul></li><li><a href=#ch>CH</a></li><li><a href=#ch单元测试>CH单元测试</a></li><li><a href=#ch-benchmark测试>CH benchmark测试</a></li></ul></li><li><a href=#本地thrift-server运行>本地thrift server运行</a></li></ul></nav></div></div><div class=post-content><h1 id=代码编译>代码编译</h1><h2 id=环境>环境</h2><p>arch: 建议x86-64
+system: 推荐ubuntu20或22版本
+compiler: clang 19
+cmake: 至少3.20</p><p>因为gluten需要和ClickHouse一块编译，因此首先得确保按照<a href=https://clickhouse.com/docs/development/build>How to Build ClickHouse on Linux</a>中初始化系统环境</p><h2 id=编译gluten>编译Gluten</h2><div class=highlight><pre style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash>git clone https://github.com/apache/incubator-gluten
+<span style=color:#8be9fd;font-style:italic>export</span> <span style=color:#8be9fd;font-style:italic>MAVEN_OPTS</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;-Xmx32g -XX:ReservedCodeCacheSize=2g&#34;</span>
+mvn clean package -Pbackends-clickhouse -Pspark-3.3 -Pceleborn -Piceberg -Dbuild_cpp<span style=color:#ff79c6>=</span>OFF -Dcpp_tests<span style=color:#ff79c6>=</span>OFF -Dbuild_arrow<span style=color:#ff79c6>=</span>OFF -Dbuild_protobuf<span style=color:#ff79c6>=</span>ON -Dbuild_jemalloc<span style=color:#ff79c6>=</span>ON -Dspark.gluten.sql.columnar.backend.lib<span style=color:#ff79c6>=</span>ch -Dspotless-check.skip -DfailIfNoTests<span style=color:#ff79c6>=</span><span style=color:#8be9fd;font-style:italic>false</span> -DskipTests  -Pdelta
+</code></pre></div><p>编译结束后能看到对应的jar包</p><div class=highlight><pre style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash>$ <span style=color:#8be9fd;font-style:italic>cd</span> backends-clickhouse/target
+$ ll -rt *.jar 
+-rw-r--r-- <span style=color:#bd93f9>1</span> root root <span style=color:#bd93f9>59810700</span> Apr  <span style=color:#bd93f9>3</span> 14:22 backends-clickhouse-1.5.0-SNAPSHOT-tests.jar
+-rw-r--r-- <span style=color:#bd93f9>1</span> root root  <span style=color:#bd93f9>2127903</span> Apr  <span style=color:#bd93f9>3</span> 14:22 backends-clickhouse-1.5.0-SNAPSHOT.jar
+-rw-r--r-- <span style=color:#bd93f9>1</span> root root <span style=color:#bd93f9>12132532</span> Apr  <span style=color:#bd93f9>3</span> 14:23 gluten-1.5.0-SNAPSHOT-spark-3.3-jar-with-dependencies.jar
+-rw-r--r-- <span style=color:#bd93f9>1</span> root root  <span style=color:#bd93f9>2127903</span> Apr  <span style=color:#bd93f9>3</span> 14:23 backends-clickhouse-1.5.0-SNAPSHOT-3.3.jar
+</code></pre></div><h2 id=编译clickhouse>编译ClickHouse</h2><p>ClickHouse我们使用Kyligence专门维护的仓库</p><div class=highlight><pre style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash>git clone https://github.com/Kyligence/ClickHouse
+<span style=color:#6272a4># 注意这里的&lt;branch&gt;对应着gluten中clickhouse.version中的分支，一般格式是rebase_ch/YYYYMMDD</span>
+git checkout &lt;branch&gt;  
+<span style=color:#8be9fd;font-style:italic>cd</span> ClickHouse
+<span style=color:#8be9fd;font-style:italic>cd</span> contrib
+bash update-submodules.sh
+<span style=color:#8be9fd;font-style:italic>cd</span> ../utils
+<span style=color:#6272a4># 将gluten中CH相关的cpp代码软连到CH工程中，方便后续联编译</span>
+ln -sf /path/to/gluten/cpp-ch/local-engine extern-local-engine
+
+<span style=color:#6272a4># 回到CH根目录</span>
+<span style=color:#8be9fd;font-style:italic>cd</span> .. 
+bash build_gcc.sh
+</code></pre></div><p>build_gcc.sh内容如下</p><div class=highlight><pre style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash>mkdir -p build_gcc
+<span style=color:#8be9fd;font-style:italic>cd</span> build_gcc
+
+<span style=color:#6272a4># release only</span>
+cmake -G Ninja <span style=color:#f1fa8c>&#34;</span><span style=color:#f1fa8c>-DCMAKE_EXPORT_COMPILE_COMMANDS=YES -DCMAKE_C_COMPILER=</span><span style=color:#ff79c6>$(</span><span style=color:#8be9fd;font-style:italic>command</span> -v clang-19<span style=color:#ff79c6>)</span><span style=color:#f1fa8c>&#34;</span> <span style=color:#f1fa8c>&#34;</span><span style=color:#f1fa8c>-DCMAKE_CXX_COMPILER=</span><span style=color:#ff79c6>$(</span><span style=color:#8be9fd;font-style:italic>command</span> -v clang++-19<span style=color:#ff79c6>)</span><span style=color:#f1fa8c>&#34;</span> -DLLD_PATH<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;</span><span style=color:#ff79c6>$(</span><span style=color:#8be9fd;font-style:italic>command</span> -v ld.lld-18<span style=color:#ff79c6>)</span><span style=color:#f1fa8c>&#34;</span> -DCMAKE_BUILD_TYPE<span style=color:#ff79c6>=</span>RelWithDebInfo -DENABLE_PROTOBUF<span style=color:#ff79c6>=</span>ON -DENABLE_TESTS<span style=color:#ff79c6>=</span>ON -DENABLE_JEMALLOC<span style=color:#ff79c6>=</span>ON -DENABLE_MULTITARGET_CODE<span style=color:#ff79c6>=</span>ON -DENABLE_EXTERN_LOCAL_ENGINE<span style=color:#ff79c6>=</span>ON -DENABLE_ODBC<span style=color:#ff79c6>=</span>OFF -DENABLE_CAPNP<span style=color:#ff79c6>=</span>OFF -DENABLE_GRPC<span style=color:#ff79c6>=</span>OFF -DENABLE_RUST<span style=color:#ff79c6>=</span>OFF -DENABLE_H3<span style=color:#ff79c6>=</span>OFF -DENABLE_AMQPCPP<span style=color:#ff79c6>=</span>OFF -DENABLE_CASSANDRA<span style=color:#ff79c6>=</span>OFF -DENABLE_KAFKA<span style=color:#ff79c6>=</span>ON -DENABLE_NATS<span style=color:#ff79c6>=</span>OFF -DENABLE_LIBPQXX<span style=color:#ff79c6>=</span>OFF -DENABLE_NURAFT<span style=color:#ff79c6>=</span>OFF -DENABLE_DATASKETCHES<span style=color:#ff79c6>=</span>OFF -DENABLE_SQLITE<span style=color:#ff79c6>=</span>OFF -DENABLE_S2_GEOMETRY<span style=color:#ff79c6>=</span>OFF -DENABLE_ANNOY<span style=color:#ff79c6>=</span>OFF -DENABLE_ULID<span style=color:#ff79c6>=</span>OFF -DENABLE_MYSQL<span style=color:#ff79c6>=</span>OFF -DENABLE_BCRYPT<span style=color:#ff79c6>=</span>OFF -DENABLE_LDAP<span style=color:#ff79c6>=</span>OFF -DENABLE_MSGPACK<span style=color:#ff79c6>=</span>OFF -DUSE_REPLXX<span style=color:#ff79c6>=</span>OFF -DENABLE_CLICKHOUSE_ALL<span style=color:#ff79c6>=</span>OFF -DENABLE_GWP_ASAN<span style=color:#ff79c6>=</span>OFF -DCOMPILER_FLAGS<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#39;-fvisibility=hidden -fvisibility-inlines-hidden&#39;</span> -DENABLE_THINLTO<span style=color:#ff79c6>=</span>OFF -DENABLE_AWS_S3<span style=color:#ff79c6>=</span>OFF -DENABLE_AZURE_BLOB_STORAGE<span style=color:#ff79c6>=</span>OFF -DENABLE_HIVE<span style=color:#ff79c6>=</span><span style=color:#bd93f9>1</span> -DENABLE_BENCHMARKS<span style=color:#ff79c6>=</span>ON -DENABLE_AWS_S3<span style=color:#ff79c6>=</span><span style=color:#bd93f9>0</span> -DENABLE_AVRO<span style=color:#ff79c6>=</span><span style=color:#bd93f9>0</span> -DENABLE_SSL<span style=color:#ff79c6>=</span><span style=color:#bd93f9>1</span> -DENABLE_SSH<span style=color:#ff79c6>=</span><span style=color:#bd93f9>0</span> ..  
+
+ninja libch
+</code></pre></div><p>编译结束后能看到生成的共享库文件</p><div class=highlight><pre style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=color:#8be9fd;font-style:italic>cd</span> build_gcc/utils/extern-local-engine
+$ ll -rt libch.so 
+-rwxr-xr-x <span style=color:#bd93f9>1</span> root root <span style=color:#bd93f9>2337932552</span> May <span style=color:#bd93f9>15</span> 16:50 libch.so
+</code></pre></div><h1 id=开发环境配置>开发环境配置</h1><h2 id=clickhouse>ClickHouse</h2><p>ClickHouse是个纯C++工程，推荐使用<a href=https://backendhouse.github.io/post/c++%E5%BC%80%E5%8F%91%E7%8E%AF%E5%A2%83%E6%9C%80%E4%BD%B3%E5%AE%9E%E8%B7%B5/>vscode + remote-ssh + clangd</a>搭建开发环境。工程目录为/path/to/ClickHouse</p><h2 id=gluten>Gluten</h2><p>Gluten代码按照语言分成两个部分，以下分开讲解</p><p>一部分是scala/java, 工程目录为/path/to/gluten，使用<a href=https://blog.csdn.net/qq_50477101/article/details/140595667>IDEA remote模式</a>开发。</p><p><strong>注意</strong> Gluten中maven profiles选项默认对CH Backend不生效，需要修改/path/to/gluten/pom.xml文件，</p><div class=highlight><pre style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-diff data-lang=diff>$ cat pom.patch       
+<span style=font-weight:700>diff --git a/pom.xml b/pom.xml
+</span><span style=font-weight:700></span><span style=font-weight:700>index 03fe1f49e..54dba856c 100644
+</span><span style=font-weight:700></span><span style=color:#8b080b>--- a/pom.xml
+</span><span style=color:#8b080b></span><span style=font-weight:700>+++ b/pom.xml
+</span><span style=font-weight:700></span><span style=font-weight:700>@@ -69,13 +69,13 @@
+</span><span style=font-weight:700></span>     &lt;scala.binary.version&gt;2.12&lt;/scala.binary.version&gt;
+     &lt;scala.version&gt;2.12.15&lt;/scala.version&gt;
+     &lt;spark.major.version&gt;3&lt;/spark.major.version&gt;
+<span style=color:#8b080b>-    &lt;sparkbundle.version&gt;3.4&lt;/sparkbundle.version&gt;
+</span><span style=color:#8b080b></span><span style=color:#8b080b>-    &lt;spark.version&gt;3.4.4&lt;/spark.version&gt;
+</span><span style=color:#8b080b></span><span style=color:#8b080b>-    &lt;sparkshim.artifactId&gt;spark-sql-columnar-shims-spark34&lt;/sparkshim.artifactId&gt;
+</span><span style=color:#8b080b></span><span style=font-weight:700>+    &lt;sparkbundle.version&gt;3.3&lt;/sparkbundle.version&gt;
+</span><span style=font-weight:700></span><span style=font-weight:700>+    &lt;spark.version&gt;3.3.1&lt;/spark.version&gt;
+</span><span style=font-weight:700></span><span style=font-weight:700>+    &lt;sparkshim.artifactId&gt;spark-sql-columnar-shims-spark33&lt;/sparkshim.artifactId&gt;
+</span><span style=font-weight:700></span>     &lt;iceberg.version&gt;1.5.0&lt;/iceberg.version&gt;
+     &lt;delta.package.name&gt;delta-core&lt;/delta.package.name&gt;
+<span style=color:#8b080b>-    &lt;delta.version&gt;2.4.0&lt;/delta.version&gt;
+</span><span style=color:#8b080b></span><span style=color:#8b080b>-    &lt;delta.binary.version&gt;24&lt;/delta.binary.version&gt;
+</span><span style=color:#8b080b></span><span style=font-weight:700>+    &lt;delta.version&gt;2.3.0&lt;/delta.version&gt;
+</span><span style=font-weight:700></span><span style=font-weight:700>+    &lt;delta.binary.version&gt;23&lt;/delta.binary.version&gt;
+</span><span style=font-weight:700></span>     &lt;celeborn.version&gt;0.5.4&lt;/celeborn.version&gt;
+     &lt;uniffle.version&gt;0.9.2&lt;/uniffle.version&gt;
+     &lt;arrow.version&gt;15.0.0&lt;/arrow.version&gt;
+<span style=font-weight:700>@@ -301,20 +301,6 @@
+</span><span style=font-weight:700></span>         &lt;caffeine.version&gt;3.1.8&lt;/caffeine.version&gt;
+       &lt;/properties&gt;
+     &lt;/profile&gt;
+<span style=color:#8b080b>-    &lt;profile&gt;
+</span><span style=color:#8b080b></span><span style=color:#8b080b>-      &lt;id&gt;spark-3.2&lt;/id&gt;
+</span><span style=color:#8b080b></span><span style=color:#8b080b>-      &lt;properties&gt;
+</span><span style=color:#8b080b></span><span style=color:#8b080b>-        &lt;sparkbundle.version&gt;3.2&lt;/sparkbundle.version&gt;
+</span><span style=color:#8b080b></span><span style=color:#8b080b>-        &lt;sparkshim.artifactId&gt;spark-sql-columnar-shims-spark32&lt;/sparkshim.artifactId&gt;
+</span><span style=color:#8b080b></span><span style=color:#8b080b>-        &lt;spark.version&gt;3.2.2&lt;/spark.version&gt;
+</span><span style=color:#8b080b></span><span style=color:#8b080b>-        &lt;iceberg.version&gt;1.3.1&lt;/iceberg.version&gt;
+</span><span style=color:#8b080b></span><span style=color:#8b080b>-        &lt;delta.package.name&gt;delta-core&lt;/delta.package.name&gt;
+</span><span style=color:#8b080b></span><span style=color:#8b080b>-        &lt;delta.version&gt;2.0.1&lt;/delta.version&gt;
+</span><span style=color:#8b080b></span><span style=color:#8b080b>-        &lt;delta.binary.version&gt;20&lt;/delta.binary.version&gt;
+</span><span style=color:#8b080b></span><span style=color:#8b080b>-        &lt;antlr4.version&gt;4.8&lt;/antlr4.version&gt;
+</span><span style=color:#8b080b></span><span style=color:#8b080b>-        &lt;hudi.version&gt;0.15.0&lt;/hudi.version&gt;
+</span><span style=color:#8b080b></span><span style=color:#8b080b>-      &lt;/properties&gt;
+</span><span style=color:#8b080b></span><span style=color:#8b080b>-    &lt;/profile&gt;
+</span><span style=color:#8b080b></span>     &lt;profile&gt;
+       &lt;id&gt;spark-3.3&lt;/id&gt;
+       &lt;properties&gt;
+<span style=font-weight:700>@@ -329,50 +315,6 @@
+</span><span style=font-weight:700></span>         &lt;hudi.version&gt;0.15.0&lt;/hudi.version&gt;
+       &lt;/properties&gt;
+     &lt;/profile&gt;
+<span style=color:#8b080b>-    &lt;profile&gt;
+</span><span style=color:#8b080b></span><span style=color:#8b080b>-      &lt;id&gt;spark-3.4&lt;/id&gt;
+</span><span style=color:#8b080b></span><span style=color:#8b080b>-      &lt;properties&gt;
+</span><span style=color:#8b080b></span><span style=color:#8b080b>-        &lt;sparkbundle.version&gt;3.4&lt;/sparkbundle.version&gt;
+</span><span style=color:#8b080b></span><span style=color:#8b080b>-        &lt;sparkshim.artifactId&gt;spark-sql-columnar-shims-spark34&lt;/sparkshim.artifactId&gt;
+</span><span style=color:#8b080b></span><span style=color:#8b080b>-        &lt;spark.version&gt;3.4.4&lt;/spark.version&gt;
+</span><span style=color:#8b080b></span><span style=color:#8b080b>-        &lt;iceberg.version&gt;1.7.1&lt;/iceberg.version&gt;
+</span><span style=color:#8b080b></span><span style=color:#8b080b>-        &lt;delta.package.name&gt;delta-core&lt;/delta.package.name&gt;
+</span><span style=color:#8b080b></span><span style=color:#8b080b>-        &lt;delta.version&gt;2.4.0&lt;/delta.version&gt;
+</span><span style=color:#8b080b></span><span style=color:#8b080b>-        &lt;delta.binary.version&gt;24&lt;/delta.binary.version&gt;
+</span><span style=color:#8b080b></span><span style=color:#8b080b>-        &lt;antlr4.version&gt;4.9.3&lt;/antlr4.version&gt;
+</span><span style=color:#8b080b></span><span style=color:#8b080b>-        &lt;hudi.version&gt;0.15.0&lt;/hudi.version&gt;
+</span><span style=color:#8b080b></span><span style=color:#8b080b>-      &lt;/properties&gt;
+</span><span style=color:#8b080b></span><span style=color:#8b080b>-    &lt;/profile&gt;
+</span><span style=color:#8b080b></span><span style=color:#8b080b>-    &lt;profile&gt;
+</span><span style=color:#8b080b></span><span style=color:#8b080b>-      &lt;id&gt;spark-3.5&lt;/id&gt;
+</span><span style=color:#8b080b></span><span style=color:#8b080b>-      &lt;properties&gt;
+</span><span style=color:#8b080b></span><span style=color:#8b080b>-        &lt;sparkbundle.version&gt;3.5&lt;/sparkbundle.version&gt;
+</span><span style=color:#8b080b></span><span style=color:#8b080b>-        &lt;sparkshim.artifactId&gt;spark-sql-columnar-shims-spark35&lt;/sparkshim.artifactId&gt;
+</span><span style=color:#8b080b></span><span style=color:#8b080b>-        &lt;spark.version&gt;3.5.2&lt;/spark.version&gt;
+</span><span style=color:#8b080b></span><span style=color:#8b080b>-        &lt;iceberg.version&gt;1.5.0&lt;/iceberg.version&gt;
+</span><span style=color:#8b080b></span><span style=color:#8b080b>-        &lt;delta.package.name&gt;delta-spark&lt;/delta.package.name&gt;
+</span><span style=color:#8b080b></span><span style=color:#8b080b>-        &lt;delta.version&gt;3.2.0&lt;/delta.version&gt;
+</span><span style=color:#8b080b></span><span style=color:#8b080b>-        &lt;delta.binary.version&gt;32&lt;/delta.binary.version&gt;
+</span><span style=color:#8b080b></span><span style=color:#8b080b>-        &lt;hudi.version&gt;0.15.0&lt;/hudi.version&gt;
+</span><span style=color:#8b080b></span><span style=color:#8b080b>-        &lt;fasterxml.version&gt;2.15.1&lt;/fasterxml.version&gt;
+</span><span style=color:#8b080b></span><span style=color:#8b080b>-        &lt;hadoop.version&gt;3.3.4&lt;/hadoop.version&gt;
+</span><span style=color:#8b080b></span><span style=color:#8b080b>-        &lt;antlr4.version&gt;4.9.3&lt;/antlr4.version&gt;
+</span><span style=color:#8b080b></span><span style=color:#8b080b>-      &lt;/properties&gt;
+</span><span style=color:#8b080b></span><span style=color:#8b080b>-      &lt;dependencies&gt;
+</span><span style=color:#8b080b></span><span style=color:#8b080b>-        &lt;dependency&gt;
+</span><span style=color:#8b080b></span><span style=color:#8b080b>-          &lt;groupId&gt;org.slf4j&lt;/groupId&gt;
+</span><span style=color:#8b080b></span><span style=color:#8b080b>-          &lt;artifactId&gt;slf4j-api&lt;/artifactId&gt;
+</span><span style=color:#8b080b></span><span style=color:#8b080b>-          &lt;version&gt;${slf4j.version}&lt;/version&gt;
+</span><span style=color:#8b080b></span><span style=color:#8b080b>-          &lt;scope&gt;provided&lt;/scope&gt;
+</span><span style=color:#8b080b></span><span style=color:#8b080b>-        &lt;/dependency&gt;
+</span><span style=color:#8b080b></span><span style=color:#8b080b>-        &lt;dependency&gt;
+</span><span style=color:#8b080b></span><span style=color:#8b080b>-          &lt;groupId&gt;org.apache.logging.log4j&lt;/groupId&gt;
+</span><span style=color:#8b080b></span><span style=color:#8b080b>-          &lt;artifactId&gt;log4j-slf4j2-impl&lt;/artifactId&gt;
+</span><span style=color:#8b080b></span><span style=color:#8b080b>-          &lt;version&gt;${log4j.version}&lt;/version&gt;
+</span><span style=color:#8b080b></span><span style=color:#8b080b>-          &lt;scope&gt;provided&lt;/scope&gt;
+</span><span style=color:#8b080b></span><span style=color:#8b080b>-        &lt;/dependency&gt;
+</span><span style=color:#8b080b></span><span style=color:#8b080b>-      &lt;/dependencies&gt;
+</span><span style=color:#8b080b></span><span style=color:#8b080b>-    &lt;/profile&gt;
+</span><span style=color:#8b080b></span>     &lt;profile&gt;
+       &lt;id&gt;hadoop-2.7.4&lt;/id&gt;
+       &lt;properties&gt;
+</code></pre></div><p>然后在Maven Project窗口中reload</p><p><img src=https://backendhouse.github.io/images/Apache%20Gluten%20+%20ClickHouse%20Backend%E5%BC%80%E5%8F%91%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA/image.png alt="alt text"></p><p>一部分为CH backend相关的cpp代码，工程目录为/path/to/gluten/cpp-ch/local-engine, 同样使用<a href=https://backendhouse.github.io/post/c++%E5%BC%80%E5%8F%91%E7%8E%AF%E5%A2%83%E6%9C%80%E4%BD%B3%E5%AE%9E%E8%B7%B5/>vscode + remote-ssh + clangd</a>。</p><p><strong>注意</strong> 该工程和ClickHouse工程共享同一个compile_commands.json，所以需要创建软连</p><div class=highlight><pre style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash>ln -sf /path/to/clickhouse/build_gcc/compile_commands ./compile_commands.json
+</code></pre></div><p>在提交代码之前，需要对已改动文件批量进行格式化：</p><div class=highlight><pre style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash>$ cat tidy.sh 
+<span style=color:#8be9fd;font-style:italic>prefix</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>`</span><span style=color:#8be9fd;font-style:italic>pwd</span><span style=color:#f1fa8c>`</span>
+<span style=color:#8be9fd;font-style:italic>files</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>`</span>git status . | grep -e <span style=color:#f1fa8c>&#34;modified:&#34;</span> -e <span style=color:#f1fa8c>&#34;new file:&#34;</span> | awk -F<span style=color:#f1fa8c>&#39;:&#39;</span> <span style=color:#f1fa8c>&#39;{print $2}&#39;</span> | awk -v <span style=color:#8be9fd;font-style:italic>prefix</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>${</span><span style=color:#8be9fd;font-style:italic>prefix</span><span style=color:#f1fa8c>}</span> <span style=color:#f1fa8c>&#39;{print prefix&#34;/&#34;$1}&#39;</span> | grep -e java -e scala | tr <span style=color:#f1fa8c>&#34;\n&#34;</span> <span style=color:#f1fa8c>&#34;,&#34;</span><span style=color:#f1fa8c>`</span>
+mvn spotless:apply -DspotlessFiles<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;</span><span style=color:#f1fa8c>${</span><span style=color:#8be9fd;font-style:italic>new_files</span><span style=color:#f1fa8c>}</span><span style=color:#f1fa8c>&#34;</span> -Pbackends-clickhouse -Pspark-3.3 -Pceleborn -Pspark-ut -Pceleborn
+</code></pre></div><p>提交PR之后，有时候需要手动下载log文件，方便定位问题:</p><div class=highlight><pre style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash>$ cat get_log.sh  
+curl https://gluten:passwdm@opencicd.kyligence.com/job/gluten/job/gluten-ci/<span style=color:#8be9fd;font-style:italic>$1</span>/consoleText  &gt; <span style=color:#8be9fd;font-style:italic>$1</span>.log
+
+$ cat get_armlog.sh 
+curl https://gluten:passwd@opencicd.kyligence.com/job/gluten/job/gluten-ci-arm/<span style=color:#8be9fd;font-style:italic>$1</span>/consoleText &gt; <span style=color:#8be9fd;font-style:italic>$1</span>.log
+</code></pre></div><h1 id=测试>测试</h1><h2 id=gluten-1>Gluten</h2><h3 id=手动单测>手动单测</h3><p>手动单测通过maven命令行启动, 可修改<code>-Dsuites参数值中的类名</code>切换不同的test suite.</p><pre><code>LD_PRELOAD=/path/to/clickhouse/build_gcc/utils/extern-local-engine/libch.so
+mvn test -Pspark-3.3 -Dtest=None -Dsuites=&quot;org.apache.gluten.execution.hive.GlutenClickHouseHiveTableSuite*&quot; -DfailIfNoTests=false -Pspark-ut -Pbackends-clickhouse -Pceleborn -Pdelta -Piceberg -Dbuild_cpp=OFF -Dcpp_tests=OFF -Dbuild_arrow=OFF -Dbuild_protobuf=ON -Dbuild_jemalloc=ON -Dspark.gluten.sql.columnar.backend.lib=ch -Dcheckstyle.skip=true -Dscalastyle.skip -Dcheckstyle.skip -Dspotless-check.skip  -DargLine=&quot;-Dspark.test.home=/path/to/test/home -Dspark.gluten.sql.columnar.libpath=/data1/liyang/cppproject/kyli/ClickHouse/build_gcc/utils/extern-local-engine/libch.so&quot; -Dtpcds.data.path=/data1 
+</code></pre><h3 id=idea单测>IDEA单测</h3><p>首先在IDEA的gluten工程中的maven project窗口中，添加gluten-ut/spark3.3和celeborn/clickhouse (如果还有其他未添加的folder, 也可按需添加)</p><p>对于org.apache.gluten.*下的test suite, 修改对应的"Run/Debug Configurations&rdquo;
+<img src=https://backendhouse.github.io/images/Apache%20Gluten%20+%20ClickHouse%20Backend%E5%BC%80%E5%8F%91%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA/image-1.png alt="alt text"></p><p>其中</p><ul><li>VM options为<code>-Dspark.gluten.sql.columnar.backend.lib=ch -Dspark.gluten.sql.columnar.libpath=/path/to/ClickHouse/build_gcc/utils/extern-local-engine/libch.so -Dspark.test.home=/path/to/test/home -Dtpcds.data.path=/data1</code></li><li>Environment variables: <code>LD_PRELOAD=/path/to/clickhouse/build_gcc/utils/extern-local-engine/libch.so</code></li><li>Use class of module要选<code>backends-clickhouse</code></li></ul><p>对于org.apache.spark.*下的test suite, 首先修改对应的配置模板
+<img src=https://backendhouse.github.io/images/Apache%20Gluten%20+%20ClickHouse%20Backend%E5%BC%80%E5%8F%91%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA/image-2.png alt="alt text"></p><p><img src=https://backendhouse.github.io/images/Apache%20Gluten%20+%20ClickHouse%20Backend%E5%BC%80%E5%8F%91%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA/image-3.png alt="alt text"></p><p>其中</p><ul><li>VM options同上</li><li>Environment variables同上</li><li>Use calss of module要选<code>gluten-ut-spark33</code></li></ul><p>配置完成后即可运行test suite或某个test case</p><p><img src=https://backendhouse.github.io/images/Apache%20Gluten%20+%20ClickHouse%20Backend%E5%BC%80%E5%8F%91%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA/image-4.png alt="alt text"></p><p><strong>注意</strong>: 有时候跑ut build阶段会失败，此时可尝试先执行mvn clean, 再按照<a href=#%E7%BC%96%E8%AF%91gluten>编译Gluten</a>中的命令手动编译，最后重新运行ut。</p><h2 id=ch>CH</h2><p>CH既包含单元测试，也包含benchmark测试。</p><h2 id=ch单元测试>CH单元测试</h2><p>首先将<a href=#%E7%BC%96%E8%AF%91clickhouse>编译CH</a>中build_gcc.sh中的<code>ninja libch</code>替换成<code>ninja unit_tests_local_engine</code></p><p>然后运行单测</p><div class=highlight><pre style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash>./build_gcc/utils/local-engine/tests/unit_tests_local_engine  --gtest_filter<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;xxx&#34;</span>
+</code></pre></div><h2 id=ch-benchmark测试>CH benchmark测试</h2><p>首先将<a href=#%E7%BC%96%E8%AF%91clickhouse>编译CH</a>中build_gcc.sh中的<code>ninja libch</code>替换成<code>ninja benchmark_local_engine</code>
+然后运行单测</p><div class=highlight><pre style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash>./build_gcc/utils/local-engine/tests/benchmark_local_engine --benchmark_filter<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;xxx&#34;</span>
+</code></pre></div><h1 id=本地thrift-server运行>本地thrift server运行</h1><p>主要参考<a href=https://github.com/apache/incubator-gluten/blob/main/docs/get-started/ClickHouse.md#gluten-in-local-spark-thrift-server>官方文档</a></p><p>最后补充下TPC-H数据集对应的建表sql</p><div class=highlight><pre style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql>
+
+<span style=color:#ff79c6>CREATE</span> <span style=color:#ff79c6>TEMPORARY</span> <span style=color:#ff79c6>VIEW</span> lineitem
+<span style=color:#ff79c6>USING</span> org.apache.spark.<span style=color:#ff79c6>sql</span>.parquet
+<span style=color:#ff79c6>OPTIONS</span> (
+  path <span style=color:#f1fa8c>&#34;</span><span style=color:#f1fa8c>/data1/liyang/cppproject/gluten/gluten-core/src/test/resources/tpch-data/lineitem</span><span style=color:#f1fa8c>&#34;</span>
+) ;
+
+<span style=color:#ff79c6>CREATE</span> <span style=color:#ff79c6>TEMPORARY</span> <span style=color:#ff79c6>VIEW</span> orders
+<span style=color:#ff79c6>USING</span> org.apache.spark.<span style=color:#ff79c6>sql</span>.parquet
+<span style=color:#ff79c6>OPTIONS</span> (
+  path <span style=color:#f1fa8c>&#34;</span><span style=color:#f1fa8c>/data1/liyang/cppproject/gluten/gluten-core/src/test/resources/tpch-data/orders</span><span style=color:#f1fa8c>&#34;</span>
+) ;
+
+<span style=color:#ff79c6>CREATE</span> <span style=color:#ff79c6>TEMPORARY</span> <span style=color:#ff79c6>VIEW</span> part
+<span style=color:#ff79c6>USING</span> org.apache.spark.<span style=color:#ff79c6>sql</span>.parquet
+<span style=color:#ff79c6>OPTIONS</span> (
+  path <span style=color:#f1fa8c>&#34;</span><span style=color:#f1fa8c>/data1/liyang/cppproject/gluten/gluten-core/src/test/resources/tpch-data/part</span><span style=color:#f1fa8c>&#34;</span>
+) ;
+<span style=color:#ff79c6>CREATE</span> <span style=color:#ff79c6>TEMPORARY</span> <span style=color:#ff79c6>VIEW</span> customer
+<span style=color:#ff79c6>USING</span> org.apache.spark.<span style=color:#ff79c6>sql</span>.parquet
+<span style=color:#ff79c6>OPTIONS</span> (
+  path   <span style=color:#f1fa8c>&#34;</span><span style=color:#f1fa8c>/data1/liyang/cppproject/gluten/gluten-core/src/test/resources/tpch-data/customer</span><span style=color:#f1fa8c>&#34;</span>
+);
+
+<span style=color:#ff79c6>CREATE</span> <span style=color:#ff79c6>TEMPORARY</span> <span style=color:#ff79c6>VIEW</span> supplier
+<span style=color:#ff79c6>USING</span> org.apache.spark.<span style=color:#ff79c6>sql</span>.parquet
+<span style=color:#ff79c6>OPTIONS</span> (
+  path <span style=color:#f1fa8c>&#34;</span><span style=color:#f1fa8c>/data1/liyang/cppproject/gluten/jvm/src/test/resources/tpch-data/supplier</span><span style=color:#f1fa8c>&#34;</span>
+) ;
+
+<span style=color:#ff79c6>CREATE</span> <span style=color:#ff79c6>TEMPORARY</span> <span style=color:#ff79c6>VIEW</span> partsupp
+<span style=color:#ff79c6>USING</span> org.apache.spark.<span style=color:#ff79c6>sql</span>.parquet
+<span style=color:#ff79c6>OPTIONS</span> (
+  path <span style=color:#f1fa8c>&#34;</span><span style=color:#f1fa8c>/data1/liyang/cppproject/gluten/jvm/src/test/resources/tpch-data/partsupp</span><span style=color:#f1fa8c>&#34;</span>
+) ;
+
+<span style=color:#ff79c6>CREATE</span> <span style=color:#ff79c6>TEMPORARY</span> <span style=color:#ff79c6>VIEW</span> nation
+<span style=color:#ff79c6>USING</span>  parquet
+<span style=color:#ff79c6>OPTIONS</span> (
+  path  <span style=color:#f1fa8c>&#34;</span><span style=color:#f1fa8c>/data1/liyang/cppproject/gluten/gluten-core/src/test/resources/tpch-data/nation</span><span style=color:#f1fa8c>&#34;</span>
+) ;
+
+<span style=color:#ff79c6>CREATE</span> <span style=color:#ff79c6>TEMPORARY</span> <span style=color:#ff79c6>VIEW</span> region
+<span style=color:#ff79c6>USING</span> org.apache.spark.<span style=color:#ff79c6>sql</span>.parquet
+<span style=color:#ff79c6>OPTIONS</span> (
+  path <span style=color:#f1fa8c>&#34;</span><span style=color:#f1fa8c>/data1/liyang/cppproject/gluten/jvm/src/test/resources/tpch-data/region</span><span style=color:#f1fa8c>&#34;</span>
+) ;
+</code></pre></div></div><div class=post-copyright><p class=copyright-item><span class=item-title>文章作者</span>
+<span class=item-content>后端侠</span></p><p class=copyright-item><span class=item-title>上次更新</span>
+<span class=item-content>2025-05-21</span></p></div><footer class=post-footer><div class=post-tags><a href=/tags/%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96/>性能优化</a>
+<a href=/tags/vtune/>vtune</a></div><nav class=post-nav><a class=next href=/post/%E6%97%A0gui%E7%9A%84linux-server%E9%85%8D%E7%BD%AEvtune-gui%E6%95%99%E7%A8%8B/><span class="next-text nav-default">无GUI的Linux Server配置vtune-gui教程</span>
+<span class="next-text nav-mobile">下一篇</span>
+<i class="iconfont icon-right"></i></a></nav></footer></article></div><script src=https://utteranc.es/client.js repo=BackendHouse/hugo-comment issue-term=pathname theme=github-light crossorigin=anonymous async></script><noscript>Please enable JavaScript to view the <a href=https://github.com/utterance>comments powered by utterances.</a></noscript></div></main><footer id=footer class=footer><div class=social-links><a href=http://github.com/%e5%90%8e%e7%ab%af%e4%be%a0 class="iconfont icon-github" title=github></a><a href=https://backendhouse.github.io/index.xml type=application/rss+xml class="iconfont icon-rss" title=rss></a></div><div class=copyright><span class=power-by>由 <a class=hexo-link href=https://gohugo.io>Hugo</a> 强力驱动</span>
+<span class=division>|</span>
+<span class=theme-info>主题 -
+<a class=theme-link href=https://github.com/olOwOlo/hugo-theme-even>Even</a></span>
+<span class=copyright-year>&copy;
+2020 -
+2025<span class=heart><i class="iconfont icon-heart"></i></span><span>后端侠</span></span></div></footer><div class=back-to-top id=back-to-top><i class="iconfont icon-up"></i></div></div><script src="/lib/highlight/highlight.pack.js?v=20171001"></script><script src=https://cdn.jsdelivr.net/npm/jquery@3.2.1/dist/jquery.min.js integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin=anonymous></script><script src=https://cdn.jsdelivr.net/npm/slideout@1.0.1/dist/slideout.min.js integrity="sha256-t+zJ/g8/KXIJMjSVQdnibt4dlaDxc9zXr/9oNPeWqdg=" crossorigin=anonymous></script><script src=https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.js integrity="sha256-XVLffZaxoWfGUEbdzuLi7pwaUJv1cecsQJQqGLe7axY=" crossorigin=anonymous></script><script type=text/javascript src=/js/main.min.c12618f9a600c40bd024996677e951e64d3487006775aeb22e200c990006c5c7.js></script><script async src="https://www.googletagmanager.com/gtag/js?id=G-SYKLLYTW9K"></script><script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}
+gtag('js',new Date());gtag('config','G-SYKLLYTW9K');</script></body></html>
